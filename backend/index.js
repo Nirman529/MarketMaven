@@ -1,7 +1,10 @@
-import { PORT } from './config.js';
-import express from 'express';
+import { PORT, mongoDBURL } from './config.js';
+import express, { response } from 'express';
 import axios from 'axios';
 import cors from 'cors';
+import mongoose from 'mongoose';
+
+import { Stock } from './models/stockModel.js';
 
 const app = express();
 
@@ -9,17 +12,126 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+app.get('/', (request, response) => {
+    response.send('Hello World!');
 });
 
+mongoose
+    .connect(mongoDBURL)
+    .then(() => {
+        console.log('App connected to the database')
+        app.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    })
+    .catch((error) => {
+        console.log(error)
+    })
 
-app.get('/api/company_description', async (req, res) => {
+// add a stock
+app.post('/stock', async (request, response) => {
+    try {
+        if (
+            !request.body.name ||
+            !request.body.ticker
+        ) {
+            return response.status(400).send({
+                message: 'Send all required fields: name, ticker'
+            })
+        }
 
-    const symbol = req.params.symbol;
+        const newStock = {
+            name: request.body.name,
+            ticker: request.body.ticker
+        }
+        const stock = await Stock.create(newStock);
+
+        return response.status(201).send(stock);
+    }
+    catch (error) {
+        console.log('error.message: ', error.message)
+        response.status(500).send({ message: error.message })
+    }
+})
+
+// get all the stocks
+app.get('/stocks', async (request, response) => {
+    try {
+        const stocks = await Stock.find({});
+        return response.status(200).json(
+            {
+                count: stocks.length,
+                data: stocks
+            }
+        );
+    } catch (error) {
+        console.log(error.message);
+        response.status(500).send({ message: error.message })
+    }
+});
+
+// get a single stock
+// might contain some bugs
+app.get('/stocks/:id', async (request, response) => {
+    try {
+        const { id } = request.params;
+        const stock = Stock.findById(id);
+
+        return response.status(200).json(stock);
+    } catch (error) {
+        console.log('error.message', error.message);
+        response.status(500).send({ message: error.message });
+    }
+});
+
+// update stock
+app.put('/stocks/:id', async (request, response) => {
+    try {
+        if (
+            !request.body.name ||
+            !request.body.ticker
+        ) {
+            return response.status(400).send({
+                message: 'Send all required fields: name, ticker'
+            })
+        }
+        const { id } = request.params;
+        const result = await Stock.findByIdAndUpdate(id, request.body);
+
+        if (!result) {
+            return response.status(404).json({ message: 'Stock not found' });
+        }
+        return response.status(200).send({ message: 'Stock updated successfully' });
+    } catch (error) {
+        console.log('error.message', error.message);
+        response.status(500).send({ message: error.message });
+    }
+})
+
+// delete stock
+app.delete('/stocks/:id', async (request, response) => {
+    try {
+
+        const { id } = request.params;
+        const result = await Stock.findByIdAndDelete(id);
+        if (!result) {
+            return response.status(404).send({
+                message: 'Stock not found'
+            })
+        }
+        return response.status(200).send({ message: 'Stock deleted successfully' });
+    } catch (error) {
+        console.log('error.message', error.message);
+        response.status(500).send({ message: error.message });
+    }
+})
+
+app.get('/api/company_description', async (request, response) => {
+
+    const symbol = request.params.symbol;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FIN_KEY}`);
-        return res.send(response.data);
+        return response.send(response.data);
         /*
             country                 Country Name
             currency                Currency Symbol
@@ -36,19 +148,19 @@ app.get('/api/company_description', async (req, res) => {
          */
     } catch (error) {
         console.error(error);
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
-const updateDate = (currentDate) => {   
+const updateDate = (currentDate) => {
     var year = currentDate.getFullYear();
     var month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
     var day = currentDate.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`
 }
 
-app.get('/api/company_description', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_description', async (request, response) => {
+    const symbol = request.params.symbol;
 
     const currentDate = new Date();
     const to = updateDate(currentDate);
@@ -59,25 +171,25 @@ app.get('/api/company_description', async (req, res) => {
 
     try {
         const response = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
-        res.json({
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from polygon.io",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
-app.get('/api/company_latest_price_of_stock', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_latest_price_of_stock', async (request, response) => {
+    const symbol = request.params.symbol;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FIN_KEY}`);
         /**
@@ -90,26 +202,26 @@ app.get('/api/company_latest_price_of_stock', async (req, res) => {
             pc  Previous close price
             t   Timestamp of last stock data
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
-app.get('/api/autocomplete', async (req, res) => {
-    const query = req.params.query;
+app.get('/api/autocomplete', async (request, response) => {
+    const query = request.params.query;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/search?q=${query}&token=${FIN_KEY}`);
         /**
@@ -121,26 +233,26 @@ app.get('/api/autocomplete', async (req, res) => {
                             used in /stock/candle endpoint.
             type            security type
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
-app.get('/api/news', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/news', async (request, response) => {
+    const symbol = request.params.symbol;
 
     const currentDate = new Date();
 
@@ -171,27 +283,27 @@ app.get('/api/news', async (req, res) => {
             summary     News summary
             url         url of original article
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
 
-app.get('/api/company_recommendation_trends', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_recommendation_trends', async (request, response) => {
+    const symbol = request.params.symbol;
     const from = '2022-01-01';
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&from=${from}&token=${FIN_KEY}`);
@@ -204,26 +316,26 @@ app.get('/api/company_recommendation_trends', async (req, res) => {
             strongSell  Recommendation count of strongsell category
             Symbol      Company symbol
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
-app.get('/api/company_insider_sentiment', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_insider_sentiment', async (request, response) => {
+    const symbol = request.params.symbol;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/stock/insider-sentiment?symbol=${symbol}&token=${FIN_KEY}`);
         /**
@@ -236,53 +348,53 @@ app.get('/api/company_insider_sentiment', async (req, res) => {
             mspr        Monthly share purchase ratio
             symbol      Ticker symbol of the stock. E.g.: MSFT
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
 
-app.get('/api/company_peers', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_peers', async (request, response) => {
+    const symbol = request.params.symbol;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/stock/peers?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             response    List of company symbols
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
 
-app.get('/api/company_earnings', async (req, res) => {
-    const symbol = req.params.symbol;
+app.get('/api/company_earnings', async (request, response) => {
+    const symbol = request.params.symbol;
     try {
         const response = await axios.get(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${FIN_KEY}`);
         /**
@@ -291,37 +403,33 @@ app.get('/api/company_earnings', async (req, res) => {
             Period      Reported period
             Symbol      Company symbol
          */
-        
-        res.json({
+
+        response.json({
             success: true,
             data: response.data,
             message: "data fetched successfully"
         });
-        return res.send(response.data);
+        return response.send(response.data);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        response.status(500).json({
             success: false,
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        res.status(500).send('');
+        response.status(500).send('');
     }
 });
 
 // -----------------------------------------------------------------------------
-    /**
-        4.2.1 X (formerly known as Twitter)
-        Refer the following link for details:
-        https://developer.twitter.com/en/docs/twitter-for-websites/tweet-button/overview
-        
-        4.2.2 Facebook
-        Refer the following link for details:
-        https://developers.facebook.com/docs/plugins/share-button/
-     */
+/**
+    4.2.1 X (formerly known as Twitter)
+    Refer the following link for details:
+    https://developer.twitter.com/en/docs/twitter-for-websites/tweet-button/overview
+
+    4.2.2 Facebook
+    Refer the following link for details:
+    https://developers.facebook.com/docs/plugins/share-button/
+ */
 
 // -----------------------------------------------------------------------------
-
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
