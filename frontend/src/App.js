@@ -10,6 +10,7 @@ import Search from './page/Search';
 import Portfolio from "./page/Portfolio";
 import Watchlist from './page/Watchlist';
 import Header from './page/Header';
+import Footer from './page/Footer';
 
 const App = () => {
   return (
@@ -22,6 +23,7 @@ const App = () => {
         <Route path='/watchlist' element={<Watchlist />} />
         <Route path='/portfolio' element={<Portfolio />} />
       </Routes>
+      <Footer/>
     </>
   );
 }

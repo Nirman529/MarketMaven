@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import stocksRoutes from './routes/stocksRoutes.js'
+import apiRoutes from './routes/apiRoutes.js'
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.get('/', (request, response) => {
 });
 
 app.use('/stocks', stocksRoutes);
+app.use('/api', apiRoutes);
 
 mongoose
     .connect(mongoDBURL)

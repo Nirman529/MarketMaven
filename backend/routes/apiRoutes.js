@@ -1,16 +1,18 @@
 import express from 'express';
-import { Stock } from '../models/stockModel.js';
 import axios from 'axios';
-// add a stock
+import { POLY_KEY, FIN_KEY } from '../config.js';
+
 const router = express.Router();
 
-
-router.get('/api/company_description', async (request, response) => {
-
-    const symbol = request.params.symbol;
+router.get('/company_description', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FIN_KEY}`);
-        return response.send.json(response.data);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FIN_KEY}`);
+        response.json({
+            success: true,
+            data: aresponse.data,
+            message: "Company data fetched successfully"
+        });
         /*
             country                 Country Name
             currency                Currency Symbol
@@ -27,7 +29,11 @@ router.get('/api/company_description', async (request, response) => {
          */
     } catch (error) {
         console.error(error);
-        response.status(500).send('');
+        response.status(500).json({
+            success: false,
+            message: "Error fetching data from polygon.io",
+            error: error.message
+        });
     }
 });
 
@@ -38,8 +44,8 @@ const updateDate = (currentDate) => {
     return `${year}-${month}-${day}`
 }
 
-router.get('/api/company_description', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/polygon_data', async (request, response) => {
+    const symbol = request.query.symbol;
 
     const currentDate = new Date();
     const to = updateDate(currentDate);
@@ -49,13 +55,12 @@ router.get('/api/company_description', async (request, response) => {
     const from = updateDate(currentDate);
 
     try {
-        const response = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
+        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
         response.json({
             success: true,
-            data: response.data,
-            message: "data fetched successfully"
+            data: aresponse.data,
+            message: "polygon data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -63,14 +68,13 @@ router.get('/api/company_description', async (request, response) => {
             message: "Error fetching data from polygon.io",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
-router.get('/api/company_latest_price_of_stock', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/company_latest_price_of_stock', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             c   current price
             d   change in price
@@ -84,10 +88,9 @@ router.get('/api/company_latest_price_of_stock', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -95,14 +98,13 @@ router.get('/api/company_latest_price_of_stock', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
-router.get('/api/autocomplete', async (request, response) => {
-    const query = request.params.query;
+router.get('/autocomplete', async (request, response) => {
+    const query = request.query.query;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/search?q=${query}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/search?q=${query}&token=${FIN_KEY}`);
         /**
             count           number of results
             result          array of search result
@@ -115,10 +117,9 @@ router.get('/api/autocomplete', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -126,12 +127,11 @@ router.get('/api/autocomplete', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
-router.get('/api/news', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/news', async (request, response) => {
+    const symbol = request.query.symbol;
 
     const currentDate = new Date();
 
@@ -149,7 +149,7 @@ router.get('/api/news', async (request, response) => {
     const from = `${year}-${month}-${day}`;
 
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${FIN_KEY}`);
 
         /**
             category    News category
@@ -165,10 +165,9 @@ router.get('/api/news', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -176,16 +175,14 @@ router.get('/api/news', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
 
-router.get('/api/company_recommendation_trends', async (request, response) => {
-    const symbol = request.params.symbol;
-    const from = '2022-01-01';
+router.get('/company_recommendation_trends', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&from=${from}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             Buy         Recommendation count of buy category
             Hold        Recommendation count of hold category
@@ -198,10 +195,9 @@ router.get('/api/company_recommendation_trends', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -209,14 +205,13 @@ router.get('/api/company_recommendation_trends', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
-router.get('/api/company_insider_sentiment', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/company_insider_sentiment', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/insider-sentiment?symbol=${symbol}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/insider-sentiment?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             data        array of entries containing month by month
                         insider insight data
@@ -230,10 +225,9 @@ router.get('/api/company_insider_sentiment', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -241,25 +235,23 @@ router.get('/api/company_insider_sentiment', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 
 
-router.get('/api/company_peers', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/company_peers', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/peers?symbol=${symbol}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/peers?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             response    List of company symbols
          */
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -267,15 +259,15 @@ router.get('/api/company_peers', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
+        a
     }
 });
 
 
-router.get('/api/company_earnings', async (request, response) => {
-    const symbol = request.params.symbol;
+router.get('/company_earnings', async (request, response) => {
+    const symbol = request.query.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${FIN_KEY}`);
+        const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             Actual      Actual earnings results
             Estimate    Estimated earnings
@@ -285,10 +277,9 @@ router.get('/api/company_earnings', async (request, response) => {
 
         response.json({
             success: true,
-            data: response.data,
+            data: aresponse.data,
             message: "data fetched successfully"
         });
-        return response.send(response.data);
     } catch (error) {
         console.error(error);
         response.status(500).json({
@@ -296,7 +287,6 @@ router.get('/api/company_earnings', async (request, response) => {
             message: "Error fetching data from Finnhub",
             error: error.message
         });
-        response.status(500).send('');
     }
 });
 

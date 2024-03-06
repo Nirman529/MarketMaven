@@ -370,7 +370,7 @@ router.get('/api/company_peers', async (request, response) => {
 router.get('/api/company_earnings', async (request, response) => {
     const symbol = request.params.symbol;
     try {
-        const response = await axios.get(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${FIN_KEY}`);
+        const response = await fetch(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${FIN_KEY}`);
         /**
             Actual      Actual earnings results
             Estimate    Estimated earnings
