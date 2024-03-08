@@ -105,6 +105,10 @@ router.get('/autocomplete', async (request, response) => {
     const query = request.query.query;
     try {
         const aresponse = await axios.get(`https://finnhub.io/api/v1/search?q=${query}&token=${FIN_KEY}`);
+        const filteredResults = aresponse.data.result.filter(item => 
+            item.type === 'Common Stock' && !item.symbol.includes('.')
+        );
+        
         /**
             count           number of results
             result          array of search result
@@ -116,10 +120,11 @@ router.get('/autocomplete', async (request, response) => {
          */
 
         response.json({
-            success: true,
-            data: aresponse.data,
-            message: "data fetched successfully"
+            // data: aresponse.data,
+            data: filteredResults, // Return only filtered results
+
         });
+        
     } catch (error) {
         console.error(error);
         response.status(500).json({
