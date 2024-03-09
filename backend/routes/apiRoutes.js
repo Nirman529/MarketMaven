@@ -120,9 +120,7 @@ router.get('/autocomplete', async (request, response) => {
          */
 
         response.json({
-            // data: aresponse.data,
-            data: filteredResults, // Return only filtered results
-
+            data: filteredResults,
         });
         
     } catch (error) {
@@ -248,6 +246,9 @@ router.get('/company_peers', async (request, response) => {
     const symbol = request.query.symbol;
     try {
         const aresponse = await axios.get(`https://finnhub.io/api/v1/stock/peers?symbol=${symbol}&token=${FIN_KEY}`);
+        // const filteredResults = aresponse.data.result.filter(item => 
+        //     item.type === 'Common Stock' && !item.symbol.includes('.')
+        // );
         /**
             response    List of company symbols
          */

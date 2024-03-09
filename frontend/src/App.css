@@ -112,3 +112,47 @@
 	text-align: center;
 	font-size: 1rem;
 }
+
+.tabs .nav-tabs {
+	justify-content: center;
+}
+
+.tabs .nav-link {
+	border: none;
+	border-radius: 0;
+	background-color: transparent;
+	color: #6c757d;
+	margin-right: 2px;
+	transition: background-color 0.2s, color 0.2s;
+}
+
+.tabs .nav-link:hover {
+	background-color: #e9ecef;
+	color: #000080;
+}
+
+.tabs .nav-link.active {
+	background-color: white;
+	color: #000080;
+	border-bottom: 1px solid #000080;
+}
+
+.tab-content {
+	background-color: white;
+	padding: 15px;
+}
+
+.stock-image {
+	height: 100px;
+	width: 100px;
+}
+
+.red {
+	font-weight: bold;
+	color: #D8000C;
+}
+
+.anchor-tag {
+	color: #000080;
+	border-bottom: 1px solid #000080;
+}
