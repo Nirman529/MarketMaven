@@ -52,7 +52,7 @@
 }
 
 .footer {
-	position: absolute;
+	position: fixed;
 	bottom: 0;
 	width: 100%;
 	height: 60px;
@@ -155,4 +155,50 @@
 .anchor-tag {
 	color: #000080;
 	border-bottom: 1px solid #000080;
+}
+
+.news-image {
+	height: 100px;
+	width: 200px;
+}
+
+.card-title {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2em;
+	max-height: 2.4em;
+	font-size: 1rem;
+	margin: 0 0 10px;
+}
+
+.date-news {
+	font-size: medium;
+	font-weight: normal;
+}
+
+.share-box {
+	margin-top: 50px;
+	border: 1px solid #6c757d;
+	border-radius: 5px;
+}
+
+.share-box .row {
+	display: flex;
+	align-items: center;
+	justify-content: start;
+	flex-wrap: nowrap;
+}
+
+/* If you need to add spacing between the icons */
+.share-box a {
+	margin-right: 10px;
+	/* Adjust the spacing as needed */
+}
+
+
+.hover-effect:hover {
+	cursor: pointer;
 }
