@@ -1,3 +1,44 @@
+import axios from "axios"
+import apiLink from "../../apiLink"
+
+export const getOrders = () => {
+    return async (dispatch) => {
+        await axios.get(`${apiLink}/order/get`)
+            .then((response) => {
+                dispatch({ type: "GET_ORDERS", payload: response.data.data })
+            })
+            .then(() => {
+                setLoader(false)
+            })
+            .catch((error) => {
+                console.log('error in getOrders', error)
+            })
+    }
+}
+
+export const addOrders = (obj) => {
+    return async (dispatch) => {
+        await axios.post(`${apiLink}/order/add`, {productId: obj.ID, quantity: obj.quantity})
+            .then((response) => {
+                dispatch(getOrders())
+            }).catch((error) => {
+                console.log('error in getOrders', error)
+            })
+    }
+}
+
+export const deleteOrders = (ID) => {
+    return async (dispatch) => {
+        await axios.delete(`${apiLink}/order/remove?productId=${ID}`)
+            .then(() => {
+                dispatch(getOrders())
+            }).catch((error) => {
+                console.log('error in getOrders', error)
+            })
+    }
+}
+
+
 export const fetchStockInfo = async (ticker) => {
     try {
         const response = await fetch(`http://localhost:3000/api/company_description?symbol=${ticker}`);
@@ -96,3 +137,22 @@ export const getHourlyData = async (inputValue) => {
         return [];
     }
 };
+
+
+export const setWatchlist = async (stock) => {
+    try {
+        const response = await fetch(`http://localhost:3000/api/polygon_data?symbol=${stock}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching company_latest_price_of_stock:', error);
+        return [];
+    }
+}
+
+export const removeWatchlist = (stock) => {
+
+}

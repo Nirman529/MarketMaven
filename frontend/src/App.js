@@ -6,6 +6,7 @@ import {
   Routes,
   Route,
   Navigate,
+  BrowserRouter,
 } from 'react-router-dom'
 import Search from './page/Search';
 import Portfolio from "./page/Portfolio";
@@ -15,7 +16,7 @@ import Footer from './page/Footer';
 
 const App = () => {
   return (
-    <>
+    <BrowserRouter>
       <Header />
       <Routes>
         <Route path='/' element={<Navigate replace to="/search/home" />} />
@@ -24,8 +25,8 @@ const App = () => {
         <Route path='/watchlist' element={<Watchlist />} />
         <Route path='/portfolio' element={<Portfolio />} />
       </Routes>
-      <Footer/>
-    </>
+      <Footer />
+    </BrowserRouter>
   );
 }
 

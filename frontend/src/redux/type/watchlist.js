@@ -1,0 +1,4 @@
+export const GET_WATCHLIST = "GET_WATCHLIST"
+export const PUT_WATCHLIST = "PUT_WATCHLIST"
+export const DELETE_WATCHLIST = "DELETE_WATCHLIST"
+export const _WATCHLIST = "_WATCHLIST"

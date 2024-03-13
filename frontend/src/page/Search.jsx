@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews } from "../api/api.js";
+import { fetchStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
-import { Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
+import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import Highcharts from 'highcharts';
-import HighChartsReact from 'highcharts-react-official';
+import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -23,6 +23,16 @@ const Search = () => {
 	const [showModal, setShowModal] = useState(false);
 	const [arrowIcon, setArrowIcon] = useState(null);
 	const [priceColor, setPriceColor] = useState('');
+	const [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
+	const [hourlyData, setHourlyData] = useState(null);
+	const [totals, setTotals] = useState({
+		totalMspr: 0,
+		positiveMspr: 0,
+		negativeMspr: 0,
+		totalChange: 0,
+		positiveChange: 0,
+		negativeChange: 0,
+	});
 
 	const twitterBaseUrl = "https://twitter.com/intent/tweet";
 	const tweetText = encodeURIComponent(selectedNews?.headline);
@@ -32,33 +42,83 @@ const Search = () => {
 	let { ticker } = useParams();
 	const navigate = useNavigate();
 
-	useEffect(() => {
-		if (ticker) {
-			const getInfo = async () => {
-				try {
-					const stockData = await fetchStockInfo(ticker);
-					setStockInfo(stockData.data);
-					const companyLatestPriceOfStockData = await getCompanyLatestPriceOfStock(ticker);
-					setCompanyLatestPriceOfStock(companyLatestPriceOfStockData.data);
-					const _companyPeers = await getCompanyPeers(ticker);
-					setCompanyPeers(_companyPeers.data);
-					const _news = await getNews(ticker);
-					const validNews = await _news?.data.filter(isValid);
-
-					const priceChange = companyLatestPriceOfStock?.d;
-					const isPriceUp = priceChange > 0;
-
-					setPriceColor(isPriceUp ? 'green' : 'red');
-					setArrowIcon(isPriceUp? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>)
-
-					setNews(validNews);
-				} catch (error) {
-					console.error('Error fetching stock info:', error);
-				}
-			};
-			getInfo();
+	const performSearchWithSymbol = async (symbol) => {
+		if (!symbol) {
+			console.log("Please enter a ticker symbol to search.");
+			return;
 		}
-	}, [ticker]);
+		try {
+			const stockData = await fetchStockInfo(symbol);
+			const companyLatestPriceOfStockData = await getCompanyLatestPriceOfStock(symbol);
+			const _companyPeers = await getCompanyPeers(symbol);
+			const _news = await getNews(symbol);
+			const validNews = await _news?.data.filter(isValid);
+			const companyInsiderInfo = await getCompanyInsiderInformation(symbol);
+			const hourData = await getHourlyData(symbol);
+			const priceChange = companyLatestPriceOfStock?.d;
+			const isPriceUp = priceChange > 0;
+
+			setHourlyData(await convertData(hourData?.data.results));
+			setCompanyLatestPriceOfStock(companyLatestPriceOfStockData.data);
+			setCompanyPeers(_companyPeers.data);
+			setStockInfo(stockData.data);
+			setPriceColor(isPriceUp ? 'green' : 'red');
+			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>)
+			setCompanyInsiderInformation(await companyInsiderInfo?.data.data);
+			setNews(validNews);
+		} catch (error) {
+			console.error('Error fetching stock info:', error);
+		}
+	};
+
+	const convertData = (data) => {
+		const newArray = data?.map(item => {
+			const date = new Date(item.t);
+			const closePrice = item.c;
+
+			return [
+				Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()),
+				closePrice
+			];
+		});
+		return newArray;
+	}
+
+	const performSearch = () => {
+		if (!inputValue.trim()) {
+			console.log("Input value is empty.");
+			return;
+		}
+		performSearchWithSymbol(inputValue);
+	}
+
+	useEffect(() => {
+		if (companyInsiderInformation?.length > 0) {
+			const aggregatedValues = companyInsiderInformation?.reduce(
+				(acc, item) => {
+					acc.totalMspr += item.mspr;
+					acc.totalChange += item.change;
+
+					if (item.mspr > 0) acc.positiveMspr += item.mspr;
+					if (item.mspr < 0) acc.negativeMspr += item.mspr;
+					if (item.change > 0) acc.positiveChange += item.change;
+					if (item.change < 0) acc.negativeChange += item.change;
+
+					return acc;
+				},
+				{
+					totalMspr: 0,
+					positiveMspr: 0,
+					negativeMspr: 0,
+					totalChange: 0,
+					positiveChange: 0,
+					negativeChange: 0,
+				}
+			);
+
+			setTotals(aggregatedValues);
+		}
+	}, [companyInsiderInformation]);
 
 	useEffect(() => {
 		if (inputValue === "") {
@@ -84,19 +144,21 @@ const Search = () => {
 	}, [inputValue]);
 
 	useEffect(() => {
-		if (inputValue) {
+		if (stockInfo) {
 			navigate(`/search/${inputValue}`);
 		}
-	}, [inputValue, navigate]);
+	}, [stockInfo, inputValue, navigate]);
 
-	const handleSuggestionClick = (suggestion) => {
-		setInputValue(suggestion.symbol);
-		setSuggestions([]);
-		setShowSuggestions(false);
+	const handleSubmit = (event) => {
+		event.preventDefault();
+		performSearch();
 	};
 
-	const handleSearch = (event) => {
-		event.preventDefault();
+	const handleSuggestionClick = (suggestion) => {
+		setShowSuggestions(false);
+		setInputValue(suggestion.symbol);
+		setSuggestions([]);
+		performSearchWithSymbol(suggestion.symbol);
 	};
 
 	const isValid = (item) => {
@@ -153,11 +215,104 @@ const Search = () => {
 		return `${facebookBaseUrl}?u=${shareUrl}`;
 	};
 
+	const options = {
+		chart: {
+			type: 'line',
+			backgroundColor: '#f4f4f4',
+			color: 'green',
+		},
+		title: {
+			text: `${stockInfo?.ticker} Hourly Price Variation`
+		},
+		xAxis: {
+			type: 'datetime',
+			title: {
+				text: ''
+			}
+		},
+		yAxis: {
+			title: {
+				text: ''
+			},
+			opposite: true
+		},
+		series: [{
+			name: `${stockInfo?.ticker} Stock Price`,
+			data: hourlyData,
+			// data: [
+			// 	[Date.UTC(2024, 1, 16, 12), 183.0],
+			// 	[Date.UTC(2024, 1, 16, 13), 183.5],
+			// 	[Date.UTC(2024, 1, 16, 14), 184.5],
+			// 	[Date.UTC(2024, 1, 16, 15), 185.0],
+			// 	[Date.UTC(2024, 1, 16, 16), 184.0],
+			// 	[Date.UTC(2024, 1, 16, 17), 183.5],
+			// 	[Date.UTC(2024, 1, 16, 18), 182.5]
+			// ]
+		}]
+	}
+
+	const recommendationTrendsOptions = {
+		chart: {
+			type: 'column',
+			backgroundColor: '#f4f4f4',
+		},
+		title: {
+			text: 'Recommendation Trends'
+		},
+		xAxis: {
+			categories: ['2024-02', '2024-01', '2023-12', '2023-11']
+		},
+		yAxis: {
+			min: 0,
+			title: {
+				text: 'Number of Analysts'
+			}
+		},
+		series: [{
+			name: 'Strong Buy',
+			data: [2, 3, 3, 2]
+		}, {
+			name: 'Buy',
+			data: [13, 13, 13, 13]
+		}, {
+			name: 'Hold',
+			data: [19, 22, 23, 21]
+		}, {
+			name: 'Sell',
+			data: [12, 12, 12, 13]
+		}]
+	};
+
+	const historicalEPSSurprisesOptions = {
+		chart: {
+			type: "line",
+			backgroundColor: '#f4f4f4',
+		},
+		title: {
+			text: 'Historical EPS Surprises'
+		},
+		yAxis: {
+			title: {
+				text: 'Quarterly EPS'
+			}
+		},
+		xAxis: {
+			categories: ['2023-12-31', '2023-09-30', '2023-06-30', '2023-03-31']
+		},
+		series: [{
+			name: 'Actual',
+			data: [2.25, 2.0, 1.75, 1.5]
+		}, {
+			name: 'Estimate',
+			data: [1.25, 1.5, 1.75, 2.0]
+		}]
+	};
+
 	return (
 		<>
 			<div className="main-content">
 				<h1>STOCK SEARCH</h1>
-				<form action="" className="search-box mt-5">
+				<form action="" onSubmit={handleSubmit} className="search-box mt-5">
 					<div className='m-0'>
 						<input
 							className='ms-3'
@@ -199,7 +354,7 @@ const Search = () => {
 						)
 						)}
 					</div>
-					<button onClick={handleSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
+					<button onClick={performSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
 					<button onClick={() => clearPage()} className='me-3'><i className="bi bi-x" style={{ fontSize: '2rem' }}></i></button>
 				</form>
 				{
@@ -209,7 +364,7 @@ const Search = () => {
 								<Row>
 									<Col className='text-center'>
 										<Row>
-											<h1>{stockInfo?.ticker} **</h1>
+											<h1>{stockInfo?.ticker} <i className="bi bi-star"></i> <i className="bi bi-star-fill" style={{ color: '#E2FC38' }}></i></h1>
 											<h3>{stockInfo?.name}</h3>
 											<div>{stockInfo?.exchange}</div>
 											<div>
@@ -228,7 +383,7 @@ const Search = () => {
 									</Col>
 								</Row>
 								<Row className='d-flex justify-content-center text-center red'>
-									{ } Market closed on date
+									Market closed on date
 								</Row>
 							</div>
 							<div className="company-dashboard">
@@ -259,12 +414,15 @@ const Search = () => {
 												</Row>
 											</Col>
 											<Col md={6}>
-												{/* <YourChartComponent /> */}
+												<HighchartsReact
+													highcharts={Highcharts}
+													options={options}
+												/>
 												<div className="chart-placeholder">AAPL Hourly Price Variation</div>
 											</Col>
 										</Row>
 									</Tab>
-									<Tab eventKey="news" title="Top News" transition={false}>
+									<Tab eventKey="news" title="Top News" transition={false} key="news">
 										<Row>
 											{news?.slice(0, 20).map((item, key) => {
 												return <>
@@ -288,7 +446,43 @@ const Search = () => {
 										Tab content for Charts
 									</Tab>
 									<Tab eventKey="insights" title="Insights" transition={false}>
-										Tab content for Insights
+										<h2>Insider Sentiments</h2>
+										<Table bordered>
+											<thead>
+												<tr>
+													<th>{stockInfo?.name}</th>
+													<th>MSPR</th>
+													<th>Change</th>
+												</tr>
+											</thead>
+											<tbody>
+												<tr>
+													<td>Total</td>
+													<td>{roundNumber(totals.totalMspr)}</td>
+													<td>{roundNumber(totals.totalChange)}</td>
+												</tr>
+												<tr>
+													<td>Positive</td>
+													<td>{roundNumber(totals.positiveMspr)}</td>
+													<td>{roundNumber(totals.positiveChange)}</td>
+												</tr>
+												<tr>
+													<td>Negative</td>
+													<td>{roundNumber(totals.negativeMspr)}</td>
+													<td>{roundNumber(totals.negativeChange)}</td>
+												</tr>
+											</tbody>
+										</Table>
+										<Row className="charts-container">
+											<Col className="recommendation-trends">
+												<h3>Recommendation Trends</h3>
+												<HighchartsReact highcharts={Highcharts} options={recommendationTrendsOptions} />
+											</Col>
+											<Col className="eps-surprises">
+												<h3>Historical EPS Surprises</h3>
+												<HighchartsReact highcharts={Highcharts} options={historicalEPSSurprisesOptions} />
+											</Col>
+										</Row>
 									</Tab>
 								</Tabs>
 							</div>
@@ -329,9 +523,12 @@ const Search = () => {
 							</Modal>
 						</>
 						:
-						<div className="error-message">
-							No data found. Please enter a valid Ticker
-						</div>
+						ticker ?
+							<div className="error-message">
+								No data found. Please enter a valid Ticker
+							</div>
+							:
+							<></>
 				}
 			</div>
 		</>
