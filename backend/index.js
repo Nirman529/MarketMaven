@@ -2,7 +2,7 @@ import { PORT, mongoDBURL } from './config.js';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import stocksRoutes from './routes/stocksRoutes.js'
+import watchlistRoutes from './routes/watchlistRoutes.js'
 import apiRoutes from './routes/apiRoutes.js'
 
 const app = express();
@@ -16,7 +16,7 @@ app.get('/', (request, response) => {
     return response.status(234).send('Hello World!');
 });
 
-app.use('/stocks', stocksRoutes);
+app.use('/watchlist', watchlistRoutes);
 app.use('/api', apiRoutes);
 
 mongoose

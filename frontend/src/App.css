@@ -24,6 +24,7 @@
 
 .main-content {
 	text-align: center;
+	/* width: 75%; */
 	padding: 50px;
 }
 
@@ -155,6 +156,7 @@
 .anchor-tag {
 	color: #000080;
 	border-bottom: 1px solid #000080;
+	cursor: pointer;
 }
 
 .news-image {
@@ -163,9 +165,6 @@
 }
 
 .card-title {
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	line-height: 1.2em;

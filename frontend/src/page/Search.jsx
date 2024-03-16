@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData } from "../api/api.js";
+import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -11,21 +11,22 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Search = () => {
-	const [inputValue, setInputValue] = useState("");
-	const [stockInfo, setStockInfo] = useState(null);
-	const [companyPeers, setCompanyPeers] = useState(null);
-	const [companyLatestPriceOfStock, setCompanyLatestPriceOfStock] = useState(null);
-	const [news, setNews] = useState(null);
-	const [selectedNews, setSelectedNews] = useState(null);
-	const [suggestions, setSuggestions] = useState([]);
-	const [showSuggestions, setShowSuggestions] = useState(false);
-	const [isLoading, setIsLoading] = useState(false);
-	const [showModal, setShowModal] = useState(false);
-	const [arrowIcon, setArrowIcon] = useState(null);
-	const [priceColor, setPriceColor] = useState('');
-	const [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
-	const [hourlyData, setHourlyData] = useState(null);
-	const [totals, setTotals] = useState({
+	let [inputValue, setInputValue] = useState("");
+	let [stockInfo, setStockInfo] = useState(null);
+	let [companyPeers, setCompanyPeers] = useState(null);
+	let [companyLatestPriceOfStock, setCompanyLatestPriceOfStock] = useState(null);
+	let [news, setNews] = useState(null);
+	let [selectedNews, setSelectedNews] = useState(null);
+	let [suggestions, setSuggestions] = useState([]);
+	let [showSuggestions, setShowSuggestions] = useState(false);
+	let [isLoading, setIsLoading] = useState(false);
+	let [showModal, setShowModal] = useState(false);
+	let [arrowIcon, setArrowIcon] = useState(null);
+	let [priceColor, setPriceColor] = useState('');
+	let [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
+	let [hourlyData, setHourlyData] = useState(null);
+	const [searchTrigger, setSearchTrigger] = useState("");
+	let [totals, setTotals] = useState({
 		totalMspr: 0,
 		positiveMspr: 0,
 		negativeMspr: 0,
@@ -48,7 +49,8 @@ const Search = () => {
 			return;
 		}
 		try {
-			const stockData = await fetchStockInfo(symbol);
+			console.log('try hui',)
+			const stockData = await getStockInfo(symbol);
 			const companyLatestPriceOfStockData = await getCompanyLatestPriceOfStock(symbol);
 			const _companyPeers = await getCompanyPeers(symbol);
 			const _news = await getNews(symbol);
@@ -58,14 +60,22 @@ const Search = () => {
 			const priceChange = companyLatestPriceOfStock?.d;
 			const isPriceUp = priceChange > 0;
 
-			setHourlyData(await convertData(hourData?.data.results));
-			setCompanyLatestPriceOfStock(companyLatestPriceOfStockData.data);
-			setCompanyPeers(_companyPeers.data);
-			setStockInfo(stockData.data);
-			setPriceColor(isPriceUp ? 'green' : 'red');
-			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>)
-			setCompanyInsiderInformation(await companyInsiderInfo?.data.data);
-			setNews(validNews);
+			hourlyData = await convertData(hourData?.data.results)
+			setHourlyData(hourlyData);
+			companyLatestPriceOfStock = companyLatestPriceOfStockData.data;
+			setCompanyLatestPriceOfStock(companyLatestPriceOfStock);
+			companyPeers = _companyPeers?.data;
+			setCompanyPeers(companyPeers);
+			stockInfo = stockData?.data;
+			setStockInfo(stockInfo);
+			priceColor = isPriceUp ? 'green' : 'red';
+			setPriceColor(priceColor);
+			arrowIcon = isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>;
+			setArrowIcon(arrowIcon);
+			companyInsiderInformation = await companyInsiderInfo?.data.data;
+			setCompanyInsiderInformation(companyInsiderInformation);
+			news = validNews;
+			setNews(news);
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -91,6 +101,20 @@ const Search = () => {
 		}
 		performSearchWithSymbol(inputValue);
 	}
+
+
+
+	const triggerSearch = (symbol) => {
+		setSearchTrigger(symbol); // This will trigger the useEffect below
+	};
+
+	useEffect(() => {
+		if (searchTrigger) {
+			performSearchWithSymbol(searchTrigger);
+		}
+	}, [searchTrigger]);
+
+
 
 	useEffect(() => {
 		if (companyInsiderInformation?.length > 0) {
@@ -149,16 +173,27 @@ const Search = () => {
 		}
 	}, [stockInfo, inputValue, navigate]);
 
+	// const handleSubmit = (event) => {
+	// 	event.preventDefault();
+	// 	performSearch();
+	// };
+
 	const handleSubmit = (event) => {
 		event.preventDefault();
-		performSearch();
+		triggerSearch(inputValue); // Trigger search with current input value
 	};
 
+	// const handleSuggestionClick = (suggestion) => {
+	// 	setShowSuggestions(false);
+	// 	setInputValue(suggestion.symbol);
+	// 	setSuggestions([]);
+	// 	performSearchWithSymbol(suggestion.symbol);
+	// };
+
 	const handleSuggestionClick = (suggestion) => {
-		setShowSuggestions(false);
 		setInputValue(suggestion.symbol);
-		setSuggestions([]);
-		performSearchWithSymbol(suggestion.symbol);
+		// Directly trigger search here since it's a user action
+		triggerSearch(suggestion.symbol);
 	};
 
 	const isValid = (item) => {
@@ -215,6 +250,134 @@ const Search = () => {
 		return `${facebookBaseUrl}?u=${shareUrl}`;
 	};
 
+
+	const data = async () => {
+
+		const data2 = await fetch(
+			'https://demo-live-data.highcharts.com/aapl-ohlcv.json'
+		).then(response => response.json());
+
+		console.log('data2', data2)
+
+		return data2;
+	}
+
+	// split the data set into ohlc and volume
+	const ohlc = [],
+		volume = [],
+		dataLength = data.length,
+		// set the allowed units for data grouping
+		groupingUnits = [[
+			'week',                         // unit name
+			[1]                             // allowed multiples
+		], [
+			'month',
+			[1, 2, 3, 4, 6]
+		]];
+
+	for (let i = 0; i < dataLength; i += 1) {
+		ohlc.push([
+			data[i][0], // the date
+			data[i][1], // open
+			data[i][2], // high
+			data[i][3], // low
+			data[i][4] // close
+		]);
+
+		volume.push([
+			data[i][0], // the date
+			data[i][5] // the volume
+		]);
+	}
+
+	const chartsOptions = {
+		rangeSelector: {
+			selected: 2
+		},
+
+		title: {
+			text: 'AAPL Historical'
+		},
+
+		subtitle: {
+			text: 'With SMA and Volume by Price technical indicators'
+		},
+
+		yAxis: [{
+			startOnTick: false,
+			endOnTick: false,
+			labels: {
+				align: 'right',
+				x: -3
+			},
+			title: {
+				text: 'OHLC'
+			},
+			height: '60%',
+			lineWidth: 2,
+			resize: {
+				enabled: true
+			}
+		}, {
+			labels: {
+				align: 'right',
+				x: -3
+			},
+			title: {
+				text: 'Volume'
+			},
+			top: '65%',
+			height: '35%',
+			offset: 0,
+			lineWidth: 2
+		}],
+
+		tooltip: {
+			split: true
+		},
+
+		plotOptions: {
+			series: {
+				dataGrouping: {
+					units: groupingUnits
+				}
+			}
+		},
+
+		series: [{
+			type: 'candlestick',
+			name: 'AAPL',
+			id: 'aapl',
+			zIndex: 2,
+			data: ohlc
+		}, {
+			type: 'column',
+			name: 'Volume',
+			id: 'volume',
+			data: volume,
+			yAxis: 1
+		}, {
+			type: 'vbp',
+			linkedTo: 'aapl',
+			params: {
+				volumeSeriesID: 'volume'
+			},
+			dataLabels: {
+				enabled: false
+			},
+			zoneLines: {
+				enabled: false
+			}
+		}, {
+			type: 'sma',
+			linkedTo: 'aapl',
+			zIndex: 1,
+			marker: {
+				enabled: false
+			}
+		}]
+	}
+
 	const options = {
 		chart: {
 			type: 'line',
@@ -239,15 +402,9 @@ const Search = () => {
 		series: [{
 			name: `${stockInfo?.ticker} Stock Price`,
 			data: hourlyData,
-			// data: [
-			// 	[Date.UTC(2024, 1, 16, 12), 183.0],
-			// 	[Date.UTC(2024, 1, 16, 13), 183.5],
-			// 	[Date.UTC(2024, 1, 16, 14), 184.5],
-			// 	[Date.UTC(2024, 1, 16, 15), 185.0],
-			// 	[Date.UTC(2024, 1, 16, 16), 184.0],
-			// 	[Date.UTC(2024, 1, 16, 17), 183.5],
-			// 	[Date.UTC(2024, 1, 16, 18), 182.5]
-			// ]
+			marker: {
+				enabled: false
+			}
 		}]
 	}
 
@@ -257,56 +414,129 @@ const Search = () => {
 			backgroundColor: '#f4f4f4',
 		},
 		title: {
-			text: 'Recommendation Trends'
+			text: 'Recommendation Trends',
+			align: 'left'
 		},
 		xAxis: {
-			categories: ['2024-02', '2024-01', '2023-12', '2023-11']
+			categories: ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester United']
 		},
 		yAxis: {
 			min: 0,
 			title: {
-				text: 'Number of Analysts'
+				text: 'Count trophies'
+			},
+			stackLabels: {
+				enabled: true
+			}
+		},
+		legend: {
+			align: 'left',
+			x: 70,
+			verticalAlign: 'top',
+			y: 70,
+			floating: true,
+			backgroundColor:
+				Highcharts.defaultOptions.legend.backgroundColor || 'white',
+			borderColor: '#CCC',
+			borderWidth: 1,
+			shadow: false
+		},
+		tooltip: {
+			headerFormat: '<b>{point.x}</b><br/>',
+			pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
+		},
+		plotOptions: {
+			column: {
+				stacking: 'normal',
+				dataLabels: {
+					enabled: true
+				}
 			}
 		},
 		series: [{
-			name: 'Strong Buy',
-			data: [2, 3, 3, 2]
+			name: 'BPL',
+			data: [3, 5, 1, 13]
 		}, {
-			name: 'Buy',
-			data: [13, 13, 13, 13]
+			name: 'FA Cup',
+			data: [14, 8, 8, 12]
 		}, {
-			name: 'Hold',
-			data: [19, 22, 23, 21]
-		}, {
-			name: 'Sell',
-			data: [12, 12, 12, 13]
+			name: 'CL',
+			data: [0, 2, 6, 3]
 		}]
 	};
 
 	const historicalEPSSurprisesOptions = {
 		chart: {
-			type: "line",
-			backgroundColor: '#f4f4f4',
+			type: 'spline',
+			inverted: true
 		},
 		title: {
-			text: 'Historical EPS Surprises'
+			text: 'Atmosphere Temperature by Altitude',
+			align: 'left'
+		},
+		subtitle: {
+			text: 'According to the Standard Atmosphere Model',
+			align: 'left'
+		},
+		xAxis: {
+			reversed: false,
+			title: {
+				enabled: true,
+				text: 'Altitude'
+			},
+			labels: {
+				format: '{value} km'
+			},
+			accessibility: {
+				rangeDescription: 'Range: 0 to 80 km.'
+			},
+			maxPadding: 0.05,
+			showLastLabel: true
 		},
 		yAxis: {
 			title: {
-				text: 'Quarterly EPS'
+				text: 'Temperature'
+			},
+			labels: {
+				format: '{value}°'
+			},
+			accessibility: {
+				rangeDescription: 'Range: -90°C to 20°C.'
+			},
+			lineWidth: 2
+		},
+		legend: {
+			enabled: false
+		},
+		tooltip: {
+			headerFormat: '<b>{series.name}</b><br/>',
+			pointFormat: '{point.x} km: {point.y}°C'
+		},
+		plotOptions: {
+			spline: {
+				marker: {
+					enable: false
+				}
 			}
 		},
-		xAxis: {
-			categories: ['2023-12-31', '2023-09-30', '2023-06-30', '2023-03-31']
-		},
 		series: [{
-			name: 'Actual',
-			data: [2.25, 2.0, 1.75, 1.5]
-		}, {
-			name: 'Estimate',
-			data: [1.25, 1.5, 1.75, 2.0]
+			name: 'Temperature',
+			data: [[0, 15], [10, -50], [20, -56.5], [30, -46.5], [40, -22.1],
+			[50, -2.5], [60, -27.7], [70, -55.7], [80, -76.5]]
+
 		}]
 	};
+
+	const searchTicker = (e) => {
+		try {
+			console.log('ticker', e)
+			setInputValue(e);
+		} catch (error) {
+			console.log('error', error)
+		} finally {
+			performSearchWithSymbol(inputValue);
+		}
+	}
 
 	return (
 		<>
@@ -389,7 +619,7 @@ const Search = () => {
 							<div className="company-dashboard">
 								<Tabs defaultActiveKey="summary" id="company-dashboard" transition={false} className="tabs mb-3" justify>
 									<Tab eventKey="summary" title="Summary" transition={false}>
-										<Row>
+										<Row className='m-0 p-0'>
 											<Col md={6}>
 												<Row className='mb-3'>
 													<Col md={6} className="text-center">
@@ -406,9 +636,8 @@ const Search = () => {
 														<div className='mt-2'><span className='fw-bold'>Industry:</span> {stockInfo?.finnhubIndustry}</div>
 														<div className='mt-2'><span className='fw-bold'>Webpage:</span> <a href={stockInfo?.weburl} target="_blank" rel="noreferrer">{stockInfo?.weburl}</a></div>
 														<div className='fw-bold mt-2'>Company peers:</div>
-														not linked aa baju ae bhai
-														<p className='mt-2'>{companyPeers?.map((item) => {
-															return <span key={item} className='anchor-tag'>{item}, </span>;
+														<p className='mt-2'>{companyPeers?.map((item, key) => {
+															return <span key={item} className='anchor-tag' onClick={() => searchTicker(item)}>{item}, </span>;
 														})}</p>
 													</Col>
 												</Row>
@@ -443,7 +672,10 @@ const Search = () => {
 										</Row>
 									</Tab>
 									<Tab eventKey="charts" title="Charts" transition={false}>
-										Tab content for Charts
+										<Col className="recommendation-trends">
+											<h3>Recommendation Trends</h3>
+											{/* <HighchartsReact highcharts={Highcharts} options={chartsOptions} /> */}
+										</Col>
 									</Tab>
 									<Tab eventKey="insights" title="Insights" transition={false}>
 										<h2>Insider Sentiments</h2>

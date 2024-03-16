@@ -1,13 +1,25 @@
 import mongoose from 'mongoose'
 
-const stockSchema = mongoose.Schema(
+const watchlistSchema = mongoose.Schema(
     {
+        ticker: {
+            type: String,
+            required: true
+        },
         name: {
             type: String,
             required: true
         },
-        ticker: {
-            type: String,
+        c: {
+            type: Number,
+            required: true
+        },
+        d: {
+            type: Number,
+            required: true
+        },
+        dp: {
+            type: Number,
             required: true
         },
     },
@@ -16,4 +28,4 @@ const stockSchema = mongoose.Schema(
     }
 );
 
-export const Stock = mongoose.model('stock', stockSchema);
+export const Watchlist = mongoose.model('watchlist', watchlistSchema);

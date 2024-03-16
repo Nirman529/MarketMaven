@@ -41,7 +41,7 @@ export const deleteOrders = (ID) => {
 
 export const fetchStockInfo = async (ticker) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/company_description?symbol=${ticker}`);
+        const response = await fetch(`${apiLink}/api/company_description?symbol=${ticker}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -54,7 +54,7 @@ export const fetchStockInfo = async (ticker) => {
 
 export const loadSuggestions = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/autocomplete?query=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/autocomplete?query=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -70,7 +70,7 @@ export const loadSuggestions = async (inputValue) => {
 
 export const getCompanyLatestPriceOfStock = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/company_latest_price_of_stock?symbol=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/company_latest_price_of_stock?symbol=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -84,7 +84,7 @@ export const getCompanyLatestPriceOfStock = async (inputValue) => {
 
 export const getCompanyPeers = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/company_peers?symbol=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/company_peers?symbol=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -98,7 +98,7 @@ export const getCompanyPeers = async (inputValue) => {
 
 export const getNews = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/news?symbol=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/news?symbol=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -112,7 +112,7 @@ export const getNews = async (inputValue) => {
 
 export const getCompanyInsiderInformation = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/company_insider_sentiment?symbol=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/company_insider_sentiment?symbol=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -126,7 +126,7 @@ export const getCompanyInsiderInformation = async (inputValue) => {
 
 export const getHourlyData = async (inputValue) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/polygon_data?symbol=${inputValue}`);
+        const response = await fetch(`${apiLink}/api/polygon_data?symbol=${inputValue}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -141,7 +141,7 @@ export const getHourlyData = async (inputValue) => {
 
 export const setWatchlist = async (stock) => {
     try {
-        const response = await fetch(`http://localhost:3000/api/polygon_data?symbol=${stock}`);
+        const response = await fetch(`${apiLink}/api/polygon_data?symbol=${stock}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
