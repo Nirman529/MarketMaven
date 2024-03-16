@@ -108,3 +108,17 @@ export const getHourlyData = async (inputValue) => {
         return [];
     }
 };
+
+export const getRecommendationData = async (inputValue) => {
+    try {
+        const response = await fetch(`${apiLink}/api/company_recommendation_trends?symbol=${inputValue}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching company_latest_price_of_stock:', error);
+        return [];
+    }
+};

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData } from "../api/api.js";
+import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,7 +15,7 @@ const Search = () => {
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
 	let [companyLatestPriceOfStock, setCompanyLatestPriceOfStock] = useState(null);
-	let [news, setNews] = useState(null);
+	let [news, setNews] = useState([]);
 	let [selectedNews, setSelectedNews] = useState(null);
 	let [suggestions, setSuggestions] = useState([]);
 	let [showSuggestions, setShowSuggestions] = useState(false);
@@ -25,6 +25,7 @@ const Search = () => {
 	let [priceColor, setPriceColor] = useState('');
 	let [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
 	let [hourlyData, setHourlyData] = useState(null);
+	let [recommendationData, setRecommendationData] = useState({})
 	const [searchTrigger, setSearchTrigger] = useState("");
 	let [totals, setTotals] = useState({
 		totalMspr: 0,
@@ -59,6 +60,7 @@ const Search = () => {
 			const hourData = await getHourlyData(symbol);
 			const priceChange = companyLatestPriceOfStock?.d;
 			const isPriceUp = priceChange > 0;
+			const _recommendationData = await getRecommendationData(symbol);
 
 			hourlyData = await convertData(hourData?.data.results)
 			setHourlyData(hourlyData);
@@ -76,6 +78,8 @@ const Search = () => {
 			setCompanyInsiderInformation(companyInsiderInformation);
 			news = validNews;
 			setNews(news);
+			recommendationData = _recommendationData.data;
+			setRecommendationData(recommendationData);
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -102,8 +106,6 @@ const Search = () => {
 		performSearchWithSymbol(inputValue);
 	}
 
-
-
 	const triggerSearch = (symbol) => {
 		setSearchTrigger(symbol); // This will trigger the useEffect below
 	};
@@ -113,8 +115,6 @@ const Search = () => {
 			performSearchWithSymbol(searchTrigger);
 		}
 	}, [searchTrigger]);
-
-
 
 	useEffect(() => {
 		if (companyInsiderInformation?.length > 0) {
@@ -139,7 +139,6 @@ const Search = () => {
 					negativeChange: 0,
 				}
 			);
-
 			setTotals(aggregatedValues);
 		}
 	}, [companyInsiderInformation]);
@@ -250,7 +249,6 @@ const Search = () => {
 		return `${facebookBaseUrl}?u=${shareUrl}`;
 	};
 
-
 	const data = async () => {
 
 		const data2 = await fetch(
@@ -262,7 +260,6 @@ const Search = () => {
 		return data2;
 	}
 
-	// split the data set into ohlc and volume
 	const ohlc = [],
 		volume = [],
 		dataLength = data.length,
@@ -290,13 +287,13 @@ const Search = () => {
 		]);
 	}
 
-	const chartsOptions = {
+	const historicalChartoptions = {
 		rangeSelector: {
-			selected: 2
+			selected: 1
 		},
 
 		title: {
-			text: 'AAPL Historical'
+			text: `${ticker} Historical`
 		},
 
 		subtitle: {
@@ -304,8 +301,6 @@ const Search = () => {
 		},
 
 		yAxis: [{
-			startOnTick: false,
-			endOnTick: false,
 			labels: {
 				align: 'right',
 				x: -3
@@ -331,43 +326,39 @@ const Search = () => {
 			offset: 0,
 			lineWidth: 2
 		}],
-
 		tooltip: {
 			split: true
 		},
-
-		plotOptions: {
-			series: {
-				dataGrouping: {
-					units: groupingUnits
-				}
-			}
-		},
-
 		series: [{
 			type: 'candlestick',
 			name: 'AAPL',
-			id: 'aapl',
-			zIndex: 2,
-			data: ohlc
+			data: [
+				// An array of arrays with [timestamp, open, high, low, close]
+				[Date.UTC(2023, 0, 1), 170, 172, 168, 169],
+				[Date.UTC(2023, 0, 2), 169, 173, 167, 172],
+				[Date.UTC(2023, 0, 3), 172, 175, 171, 174],
+				// ... more data points
+			],
+			dataGrouping: {
+				units: [[
+					'week', // unit name
+					[1] // allowed multiples
+				], [
+					'month',
+					[1, 2, 3, 4, 6]
+				]]
+			}
 		}, {
 			type: 'column',
 			name: 'Volume',
-			id: 'volume',
-			data: volume,
+			data: [
+				// An array of arrays with [timestamp, volume]
+				[Date.UTC(2023, 0, 1), 120000],
+				[Date.UTC(2023, 0, 2), 140000],
+				[Date.UTC(2023, 0, 3), 150000],
+				// ... more data points
+			],
 			yAxis: 1
-		}, {
-			type: 'vbp',
-			linkedTo: 'aapl',
-			params: {
-				volumeSeriesID: 'volume'
-			},
-			dataLabels: {
-				enabled: false
-			},
-			zoneLines: {
-				enabled: false
-			}
 		}, {
 			type: 'sma',
 			linkedTo: 'aapl',
@@ -378,11 +369,15 @@ const Search = () => {
 		}]
 	}
 
-	const options = {
+	const hourlyPriceOptions = {
 		chart: {
 			type: 'line',
 			backgroundColor: '#f4f4f4',
-			color: 'green',
+		},
+		plotOptions: {
+			series: {
+				color: priceColor,
+			}
 		},
 		title: {
 			text: `${stockInfo?.ticker} Hourly Price Variation`
@@ -397,9 +392,12 @@ const Search = () => {
 			title: {
 				text: ''
 			},
-			opposite: true
+			opposite: true,
+			align: 'right'
 		},
 		series: [{
+			labels: 'left',
+			showInLegend: false,
 			name: `${stockInfo?.ticker} Stock Price`,
 			data: hourlyData,
 			marker: {
@@ -407,6 +405,41 @@ const Search = () => {
 			}
 		}]
 	}
+
+	const categories = recommendationData?.map(item => item.period.slice(0,7));
+
+	const series = [
+		{
+			name: 'Strong Buy',
+			data: recommendationData.map(item => item.strongBuy),
+			stack: 'recommendations',
+			color: '#195f32'
+		},
+		{
+			name: 'Buy',
+			data: recommendationData.map(item => item.buy),
+			stack: 'recommendations',
+			color: '#23af50'
+		},
+		{
+			name: 'Hold',
+			data: recommendationData.map(item => item.hold),
+			stack: 'recommendations',
+			color: '#af7d28'
+		},
+		{
+			name: 'Sell',
+			data: recommendationData.map(item => item.sell),
+			stack: 'recommendations',
+			color: '#f05050'
+		},
+		{
+			name: 'Strong Sell',
+			data: recommendationData.map(item => item.strongSell),
+			stack: 'recommendations',
+			color: '#732828'
+		},
+	];
 
 	const recommendationTrendsOptions = {
 		chart: {
@@ -418,28 +451,28 @@ const Search = () => {
 			align: 'left'
 		},
 		xAxis: {
-			categories: ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester United']
+			categories: categories,
 		},
 		yAxis: {
 			min: 0,
 			title: {
-				text: 'Count trophies'
+				text: '#Analysis',
 			},
 			stackLabels: {
-				enabled: true
+				enabled: false
 			}
 		},
 		legend: {
+			enabled: false,
 			align: 'left',
 			x: 70,
 			verticalAlign: 'top',
 			y: 70,
 			floating: true,
-			backgroundColor:
-				Highcharts.defaultOptions.legend.backgroundColor || 'white',
+			backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || 'white',
 			borderColor: '#CCC',
 			borderWidth: 1,
-			shadow: false
+			shadow: false,
 		},
 		tooltip: {
 			headerFormat: '<b>{point.x}</b><br/>',
@@ -453,16 +486,7 @@ const Search = () => {
 				}
 			}
 		},
-		series: [{
-			name: 'BPL',
-			data: [3, 5, 1, 13]
-		}, {
-			name: 'FA Cup',
-			data: [14, 8, 8, 12]
-		}, {
-			name: 'CL',
-			data: [0, 2, 6, 3]
-		}]
+		series: series,
 	};
 
 	const historicalEPSSurprisesOptions = {
@@ -645,7 +669,7 @@ const Search = () => {
 											<Col md={6}>
 												<HighchartsReact
 													highcharts={Highcharts}
-													options={options}
+													options={hourlyPriceOptions}
 												/>
 												<div className="chart-placeholder">AAPL Hourly Price Variation</div>
 											</Col>
@@ -673,8 +697,8 @@ const Search = () => {
 									</Tab>
 									<Tab eventKey="charts" title="Charts" transition={false}>
 										<Col className="recommendation-trends">
-											<h3>Recommendation Trends</h3>
-											{/* <HighchartsReact highcharts={Highcharts} options={chartsOptions} /> */}
+											<h3>Charts baki che!!!</h3>
+											{/* <HighchartsReact highcharts={Highcharts} options={historicalChartoptions} /> */}
 										</Col>
 									</Tab>
 									<Tab eventKey="insights" title="Insights" transition={false}>
