@@ -17,7 +17,7 @@ router.get('/company_description', async (request, response) => {
         console.error(error);
         response.status(500).json({
             success: false,
-            message: "Error fetching data from polygon.io",
+            message: "Error fetching data from finnhub.io",
             error: error.message
         });
     }
@@ -40,7 +40,7 @@ router.get('/polygon_data', async (request, response) => {
     const from = updateDate(currentDate);
 
     try {
-        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/hour/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);        
+        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/hour/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
         response.json({
             success: true,
             data: aresponse.data,
@@ -195,7 +195,6 @@ router.get('/company_peers', async (request, response) => {
     }
 });
 
-
 router.get('/company_earnings', async (request, response) => {
     const symbol = request.query.symbol;
     try {
@@ -215,4 +214,32 @@ router.get('/company_earnings', async (request, response) => {
         });
     }
 });
+
+router.get('/historical_data', async (request, response) => {
+    const symbol = request.query.symbol.toUpperCase();
+
+    const currentDate = new Date();
+    const to = currentDate.toISOString().split('T')[0];
+
+    currentDate.setMonth(currentDate.getMonth() - 6);
+    currentDate.setDate(currentDate.getDate() - 1);
+    const from = currentDate.toISOString().split('T')[0];
+
+    try {
+        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
+        response.json({
+            success: true,
+            data: aresponse.data,
+            message: "polygon data fetched successfully"
+        });
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({
+            success: false,
+            message: "Error fetching data from polygon.io",
+            error: error.message
+        });
+    }
+});
+
 export default router;

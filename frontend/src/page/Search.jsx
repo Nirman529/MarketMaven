@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData } from "../api/api.js";
+import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -25,7 +25,8 @@ const Search = () => {
 	let [priceColor, setPriceColor] = useState('');
 	let [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
 	let [hourlyData, setHourlyData] = useState(null);
-	let [recommendationData, setRecommendationData] = useState({})
+	let [recommendationData, setRecommendationData] = useState(null);
+	let [historicalData, setHistoricalData] = useState(null);
 	const [searchTrigger, setSearchTrigger] = useState("");
 	let [totals, setTotals] = useState({
 		totalMspr: 0,
@@ -51,35 +52,39 @@ const Search = () => {
 		}
 		try {
 			console.log('try hui',)
-			const stockData = await getStockInfo(symbol);
-			const companyLatestPriceOfStockData = await getCompanyLatestPriceOfStock(symbol);
+			const _stockInfo = await getStockInfo(symbol);
+			const _companyLatestPriceOfStock = await getCompanyLatestPriceOfStock(symbol);
 			const _companyPeers = await getCompanyPeers(symbol);
 			const _news = await getNews(symbol);
 			const validNews = await _news?.data.filter(isValid);
-			const companyInsiderInfo = await getCompanyInsiderInformation(symbol);
-			const hourData = await getHourlyData(symbol);
+			const _companyInsiderInformation = await getCompanyInsiderInformation(symbol);
+			const _hourlyData = await getHourlyData(symbol);
 			const priceChange = companyLatestPriceOfStock?.d;
 			const isPriceUp = priceChange > 0;
 			const _recommendationData = await getRecommendationData(symbol);
+			const _historicalData = await getHistoricalData(symbol);
 
-			hourlyData = await convertData(hourData?.data.results)
+			hourlyData = await convertData(_hourlyData?.data.results)
 			setHourlyData(hourlyData);
-			companyLatestPriceOfStock = companyLatestPriceOfStockData.data;
+			companyLatestPriceOfStock = _companyLatestPriceOfStock.data;
 			setCompanyLatestPriceOfStock(companyLatestPriceOfStock);
 			companyPeers = _companyPeers?.data;
 			setCompanyPeers(companyPeers);
-			stockInfo = stockData?.data;
+			stockInfo = _stockInfo?.data;
 			setStockInfo(stockInfo);
 			priceColor = isPriceUp ? 'green' : 'red';
 			setPriceColor(priceColor);
 			arrowIcon = isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>;
 			setArrowIcon(arrowIcon);
-			companyInsiderInformation = await companyInsiderInfo?.data.data;
+			companyInsiderInformation = await _companyInsiderInformation?.data.data;
 			setCompanyInsiderInformation(companyInsiderInformation);
 			news = validNews;
 			setNews(news);
-			recommendationData = _recommendationData.data;
-			setRecommendationData(recommendationData);
+			// recommendationData = _recommendationData?.data;
+			setRecommendationData(_recommendationData?.data);
+			historicalData = _historicalData?.data.results;
+			setHistoricalData(historicalData);
+			console.log('historicalData', historicalData)
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -411,31 +416,31 @@ const Search = () => {
 	const series = [
 		{
 			name: 'Strong Buy',
-			data: recommendationData.map(item => item.strongBuy),
+			data: recommendationData?.map(item => item?.strongBuy),
 			stack: 'recommendations',
 			color: '#195f32'
 		},
 		{
 			name: 'Buy',
-			data: recommendationData.map(item => item.buy),
+			data: recommendationData?.map(item => item?.buy),
 			stack: 'recommendations',
 			color: '#23af50'
 		},
 		{
 			name: 'Hold',
-			data: recommendationData.map(item => item.hold),
+			data: recommendationData?.map(item => item?.hold),
 			stack: 'recommendations',
 			color: '#af7d28'
 		},
 		{
 			name: 'Sell',
-			data: recommendationData.map(item => item.sell),
+			data: recommendationData?.map(item => item?.sell),
 			stack: 'recommendations',
 			color: '#f05050'
 		},
 		{
 			name: 'Strong Sell',
-			data: recommendationData.map(item => item.strongSell),
+			data: recommendationData?.map(item => item?.strongSell),
 			stack: 'recommendations',
 			color: '#732828'
 		},

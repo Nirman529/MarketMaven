@@ -122,3 +122,17 @@ export const getRecommendationData = async (inputValue) => {
         return [];
     }
 };
+
+export const getHistoricalData = async (inputValue) => {
+    try {
+        const response = await fetch(`${apiLink}/api/historical_data?symbol=${inputValue}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching historical_data:', error);
+        return [];
+    }
+};
