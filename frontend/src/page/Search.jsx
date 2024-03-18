@@ -112,7 +112,7 @@ const Search = () => {
 	}
 
 	const triggerSearch = (symbol) => {
-		setSearchTrigger(symbol); // This will trigger the useEffect below
+		setSearchTrigger(symbol);
 	};
 
 	useEffect(() => {
@@ -184,7 +184,7 @@ const Search = () => {
 
 	const handleSubmit = (event) => {
 		event.preventDefault();
-		triggerSearch(inputValue); // Trigger search with current input value
+		triggerSearch(inputValue);
 	};
 
 	// const handleSuggestionClick = (suggestion) => {
@@ -196,7 +196,6 @@ const Search = () => {
 
 	const handleSuggestionClick = (suggestion) => {
 		setInputValue(suggestion.symbol);
-		// Directly trigger search here since it's a user action
 		triggerSearch(suggestion.symbol);
 	};
 
@@ -216,15 +215,14 @@ const Search = () => {
 	}
 
 	const getUnixDate = (unixTimestamp) => {
-		// Create a new JavaScript Date object based on the timestamp multiplied by 1000 so that the argument is in milliseconds, not seconds.
 		const date = new Date(unixTimestamp * 1000);
 		const year = date.getFullYear();
-		const month = ('0' + (date.getMonth() + 1)).slice(-2); // Month is 0-indexed in JavaScript, add leading 0 and slice to ensure two digits
-		const day = ('0' + date.getDate()).slice(-2); // Add leading 0 and slice to ensure two digits
+		const month = ('0' + (date.getMonth() + 1)).slice(-2);
+		const day = ('0' + date.getDate()).slice(-2); 
 
-		const hours = ('0' + date.getHours()).slice(-2); // Add leading 0 and slice to ensure two digits
-		const minutes = ('0' + date.getMinutes()).slice(-2); // Add leading 0 and slice to ensure two digits
-		const seconds = ('0' + date.getSeconds()).slice(-2); // Add leading 0 and slice to ensure two digits
+		const hours = ('0' + date.getHours()).slice(-2);
+		const minutes = ('0' + date.getMinutes()).slice(-2);
+		const seconds = ('0' + date.getSeconds()).slice(-2);
 
 		const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 		return formattedDate;
@@ -268,10 +266,9 @@ const Search = () => {
 	const ohlc = [],
 		volume = [],
 		dataLength = data.length,
-		// set the allowed units for data grouping
 		groupingUnits = [[
-			'week',                         // unit name
-			[1]                             // allowed multiples
+			'week',
+			[1]
 		], [
 			'month',
 			[1, 2, 3, 4, 6]
@@ -279,16 +276,16 @@ const Search = () => {
 
 	for (let i = 0; i < dataLength; i += 1) {
 		ohlc.push([
-			data[i][0], // the date
-			data[i][1], // open
-			data[i][2], // high
-			data[i][3], // low
-			data[i][4] // close
+			data[i][0],
+			data[i][1],
+			data[i][2],
+			data[i][3],
+			data[i][4]
 		]);
 
 		volume.push([
-			data[i][0], // the date
-			data[i][5] // the volume
+			data[i][0],
+			data[i][5]
 		]);
 	}
 
@@ -581,7 +578,6 @@ const Search = () => {
 							onChange={(e) => autoComplete(e)}
 							onFocus={() => setShowSuggestions(true)}
 							onBlur={() => {
-								// Delay hiding suggestions so we can capture click events on suggestions
 								setTimeout(() => setShowSuggestions(false), 100);
 							}}
 						/>
