@@ -24,9 +24,9 @@ router.get('/company_description', async (request, response) => {
 });
 
 const updateDate = (currentDate) => {
-    var year = currentDate.getFullYear();
-    var month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
     var day = currentDate.getDate().toString().padStart(2, '0');
+    var month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    var year = currentDate.getFullYear();
     return `${year}-${month}-${day}`
 }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData } from "../api/api.js";
+import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -27,6 +27,7 @@ const Search = () => {
 	let [hourlyData, setHourlyData] = useState(null);
 	let [recommendationData, setRecommendationData] = useState(null);
 	let [historicalData, setHistoricalData] = useState(null);
+	let [earningsData, setEarningsData] = useState(null);
 	const [searchTrigger, setSearchTrigger] = useState("");
 	let [totals, setTotals] = useState({
 		totalMspr: 0,
@@ -63,31 +64,55 @@ const Search = () => {
 			const isPriceUp = priceChange > 0;
 			const _recommendationData = await getRecommendationData(symbol);
 			const _historicalData = await getHistoricalData(symbol);
+			const _earningsData = await getEarningsData(symbol);
 
 			hourlyData = await convertData(_hourlyData?.data.results)
 			setHourlyData(hourlyData);
+
 			companyLatestPriceOfStock = _companyLatestPriceOfStock.data;
 			setCompanyLatestPriceOfStock(companyLatestPriceOfStock);
+
 			companyPeers = _companyPeers?.data;
 			setCompanyPeers(companyPeers);
+
 			stockInfo = _stockInfo?.data;
 			setStockInfo(stockInfo);
+
 			priceColor = isPriceUp ? 'green' : 'red';
 			setPriceColor(priceColor);
+
 			arrowIcon = isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>;
 			setArrowIcon(arrowIcon);
+
 			companyInsiderInformation = await _companyInsiderInformation?.data.data;
 			setCompanyInsiderInformation(companyInsiderInformation);
+
 			news = validNews;
 			setNews(news);
+
 			// recommendationData = _recommendationData?.data;
 			setRecommendationData(_recommendationData?.data);
+
 			historicalData = _historicalData?.data.results;
 			setHistoricalData(historicalData);
-			console.log('historicalData', historicalData)
+
+			earningsData = processedHistoricalData(_earningsData?.data);
+			setEarningsData(earningsData);
+
+			console.log('historicalData', earningsData)
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
+	};
+
+	const processedHistoricalData = (data) => {
+		return data.map(item => {
+			return {
+				x: new Date(item.period),
+				y: item.actual,
+				estimate: item.estimate
+			};
+		});
 	};
 
 	const convertData = (data) => {
@@ -218,7 +243,7 @@ const Search = () => {
 		const date = new Date(unixTimestamp * 1000);
 		const year = date.getFullYear();
 		const month = ('0' + (date.getMonth() + 1)).slice(-2);
-		const day = ('0' + date.getDate()).slice(-2); 
+		const day = ('0' + date.getDate()).slice(-2);
 
 		const hours = ('0' + date.getHours()).slice(-2);
 		const minutes = ('0' + date.getMinutes()).slice(-2);
@@ -252,44 +277,15 @@ const Search = () => {
 		return `${facebookBaseUrl}?u=${shareUrl}`;
 	};
 
-	const data = async () => {
+	const volume = historicalData?.map(item => {
+		return [item.t, item.v]
+	});
 
-		const data2 = await fetch(
-			'https://demo-live-data.highcharts.com/aapl-ohlcv.json'
-		).then(response => response.json());
+	const stock_price = historicalData?.map(item => {
+		return [item.t, item.c]
+	});
 
-		console.log('data2', data2)
-
-		return data2;
-	}
-
-	const ohlc = [],
-		volume = [],
-		dataLength = data.length,
-		groupingUnits = [[
-			'week',
-			[1]
-		], [
-			'month',
-			[1, 2, 3, 4, 6]
-		]];
-
-	for (let i = 0; i < dataLength; i += 1) {
-		ohlc.push([
-			data[i][0],
-			data[i][1],
-			data[i][2],
-			data[i][3],
-			data[i][4]
-		]);
-
-		volume.push([
-			data[i][0],
-			data[i][5]
-		]);
-	}
-
-	const historicalChartoptions = {
+	const historicalChartOptions = {
 		rangeSelector: {
 			selected: 1
 		},
@@ -303,6 +299,8 @@ const Search = () => {
 		},
 
 		yAxis: [{
+			startOnTick: true,
+			endOnTick: true,
 			labels: {
 				align: 'right',
 				x: -3
@@ -331,39 +329,40 @@ const Search = () => {
 		tooltip: {
 			split: true
 		},
+		plotOptions: {
+			series: {
+				dataGrouping: {
+					// units: date
+				}
+			}
+		},
 		series: [{
 			type: 'candlestick',
-			name: 'AAPL',
-			data: [
-				// An array of arrays with [timestamp, open, high, low, close]
-				[Date.UTC(2023, 0, 1), 170, 172, 168, 169],
-				[Date.UTC(2023, 0, 2), 169, 173, 167, 172],
-				[Date.UTC(2023, 0, 3), 172, 175, 171, 174],
-				// ... more data points
-			],
-			dataGrouping: {
-				units: [[
-					'week', // unit name
-					[1] // allowed multiples
-				], [
-					'month',
-					[1, 2, 3, 4, 6]
-				]]
-			}
+			name: ticker,
+			id: ticker,
+			zIndex: 2,
+			data: stock_price
 		}, {
 			type: 'column',
 			name: 'Volume',
-			data: [
-				// An array of arrays with [timestamp, volume]
-				[Date.UTC(2023, 0, 1), 120000],
-				[Date.UTC(2023, 0, 2), 140000],
-				[Date.UTC(2023, 0, 3), 150000],
-				// ... more data points
-			],
+			id: 'volume',
+			data: volume,
 			yAxis: 1
 		}, {
+			type: 'vbp',
+			linkedTo: ticker,
+			params: {
+				volumeSeriesID: 'volume'
+			},
+			dataLabels: {
+				enabled: false
+			},
+			zoneLines: {
+				enabled: false
+			}
+		}, {
 			type: 'sma',
-			linkedTo: 'aapl',
+			linkedTo: ticker,
 			zIndex: 1,
 			marker: {
 				enabled: false
@@ -408,7 +407,7 @@ const Search = () => {
 		}]
 	}
 
-	const categories = recommendationData?.map(item => item.period.slice(0,7));
+	const recommendationTime = recommendationData?.map(item => item.period.slice(0, 7));
 
 	const series = [
 		{
@@ -450,10 +449,13 @@ const Search = () => {
 		},
 		title: {
 			text: 'Recommendation Trends',
-			align: 'left'
+			align: 'center'
+		},
+		legend: {
+			enabled: true
 		},
 		xAxis: {
-			categories: categories,
+			categories: recommendationTime,
 		},
 		yAxis: {
 			min: 0,
@@ -463,18 +465,6 @@ const Search = () => {
 			stackLabels: {
 				enabled: false
 			}
-		},
-		legend: {
-			enabled: false,
-			align: 'left',
-			x: 70,
-			verticalAlign: 'top',
-			y: 70,
-			floating: true,
-			backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || 'white',
-			borderColor: '#CCC',
-			borderWidth: 1,
-			shadow: false,
 		},
 		tooltip: {
 			headerFormat: '<b>{point.x}</b><br/>',
@@ -494,62 +484,71 @@ const Search = () => {
 	const historicalEPSSurprisesOptions = {
 		chart: {
 			type: 'spline',
-			inverted: true
+			inverted: false,
+			backgroundColor: '#f4f4f4',
 		},
 		title: {
-			text: 'Atmosphere Temperature by Altitude',
-			align: 'left'
-		},
-		subtitle: {
-			text: 'According to the Standard Atmosphere Model',
-			align: 'left'
+			text: 'Historical EPS Surprises',
+			align: 'center'
 		},
 		xAxis: {
-			reversed: false,
+			type: 'datetime',
+			dateTimeLabelFormats: {
+				day: '%Y-%m-%d' // format for displaying the date in xAxis labels
+			},
 			title: {
-				enabled: true,
-				text: 'Altitude'
+				text: 'Date'
 			},
 			labels: {
-				format: '{value} km'
+				formatter: function () {
+					return Highcharts.dateFormat('%Y-%m-%d', this.value);
+				}
 			},
-			accessibility: {
-				rangeDescription: 'Range: 0 to 80 km.'
-			},
-			maxPadding: 0.05,
-			showLastLabel: true
 		},
 		yAxis: {
 			title: {
-				text: 'Temperature'
-			},
-			labels: {
-				format: '{value}°'
-			},
-			accessibility: {
-				rangeDescription: 'Range: -90°C to 20°C.'
-			},
-			lineWidth: 2
+				text: 'Quarterly EPS'
+			}
 		},
 		legend: {
-			enabled: false
+			enabled: true
 		},
 		tooltip: {
-			headerFormat: '<b>{series.name}</b><br/>',
-			pointFormat: '{point.x} km: {point.y}°C'
+			formatter: function () {
+				const date = Highcharts.dateFormat('%Y-%m-%d', this.x);
+				return `<b>Date:</b> ${date}<br/>
+					  <b>Actual:</b> ${this.y}<br/>
+					  <b>Estimate:</b> ${this.point.estimate}`;
+			}
 		},
 		plotOptions: {
 			spline: {
 				marker: {
-					enable: false
+					enable: true
 				}
 			}
 		},
 		series: [{
-			name: 'Temperature',
-			data: [[0, 15], [10, -50], [20, -56.5], [30, -46.5], [40, -22.1],
-			[50, -2.5], [60, -27.7], [70, -55.7], [80, -76.5]]
-
+			name: 'Actual',
+			data: earningsData,
+			marker: {
+				fillColor: 'blue',
+				lineWidth: 2,
+				lineColor: null
+			}
+		}, {
+			name: 'Estimate',
+			data: earningsData?.map(point => {
+				return {
+					x: point.x,
+					y: point.estimate
+				};
+			}),
+			marker: {
+				fillColor: 'blue',
+				lineWidth: 2,
+				lineColor: null
+			}
 		}]
 	};
 
@@ -672,7 +671,6 @@ const Search = () => {
 													highcharts={Highcharts}
 													options={hourlyPriceOptions}
 												/>
-												<div className="chart-placeholder">AAPL Hourly Price Variation</div>
 											</Col>
 										</Row>
 									</Tab>
@@ -699,7 +697,7 @@ const Search = () => {
 									<Tab eventKey="charts" title="Charts" transition={false}>
 										<Col className="recommendation-trends">
 											<h3>Charts baki che!!!</h3>
-											{/* <HighchartsReact highcharts={Highcharts} options={historicalChartoptions} /> */}
+											{/* <HighchartsReact highcharts={Highcharts} options={historicalChartOptions} /> */}
 										</Col>
 									</Tab>
 									<Tab eventKey="insights" title="Insights" transition={false}>
@@ -714,17 +712,17 @@ const Search = () => {
 											</thead>
 											<tbody>
 												<tr>
-													<td>Total</td>
+													<td className='fw-bold'>Total</td>
 													<td>{roundNumber(totals.totalMspr)}</td>
 													<td>{roundNumber(totals.totalChange)}</td>
 												</tr>
 												<tr>
-													<td>Positive</td>
+													<td className='fw-bold'>Positive</td>
 													<td>{roundNumber(totals.positiveMspr)}</td>
 													<td>{roundNumber(totals.positiveChange)}</td>
 												</tr>
 												<tr>
-													<td>Negative</td>
+													<td className='fw-bold'>Negative</td>
 													<td>{roundNumber(totals.negativeMspr)}</td>
 													<td>{roundNumber(totals.negativeChange)}</td>
 												</tr>
@@ -732,11 +730,9 @@ const Search = () => {
 										</Table>
 										<Row className="charts-container">
 											<Col className="recommendation-trends">
-												<h3>Recommendation Trends</h3>
 												<HighchartsReact highcharts={Highcharts} options={recommendationTrendsOptions} />
 											</Col>
 											<Col className="eps-surprises">
-												<h3>Historical EPS Surprises</h3>
 												<HighchartsReact highcharts={Highcharts} options={historicalEPSSurprisesOptions} />
 											</Col>
 										</Row>
