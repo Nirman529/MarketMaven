@@ -383,6 +383,11 @@ const Search = () => {
 		title: {
 			text: `${stockInfo?.ticker} Hourly Price Variation`
 		},
+		tooltip: {
+			formatter: function () {
+				return `${stockInfo?.ticker}:${this.y}`
+			}
+		},
 		xAxis: {
 			type: 'datetime',
 			title: {

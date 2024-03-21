@@ -2,7 +2,32 @@ import express from 'express';
 import { Watchlist } from '../models/stockModel.js';
 const router = express.Router();
 
-router.post('/add/', async (request, response) => {
+
+router.post('/add', async (request, response) => {
+    const { name, ticker, c, d, dp } = request.body;
+
+    // Check for missing fields
+    if (!name || !ticker || c === undefined || d === undefined || dp === undefined) {
+        return response.status(400).send({
+            message: 'All fields are required: name, ticker, c, d, dp'
+        });
+    }
+
+    try {
+        const newStock = new Watchlist({
+            name, ticker, c, d, dp,
+        });
+
+        const savedStock = await newStock.save();
+
+        return response.status(201).json(savedStock);
+    } catch (error) {
+        console.error('Error adding new stock:', error.message);
+        response.status(500).send({ message: 'Error adding new stock: ' + error.message });
+    }
+});
+
+router.post('/add', async (request, response) => {
     try {
         if (
             !request.body.name ||
@@ -10,7 +35,6 @@ router.post('/add/', async (request, response) => {
             !request.body.c ||
             !request.body.d ||
             !request.body.dp
-
         ) {
             return response.status(400).send({
                 message: 'Send all required fields: name, ticker, c, d, dp'
@@ -35,7 +59,7 @@ router.post('/add/', async (request, response) => {
 })
 
 // get all the stocks
-router.get('/get/', async (request, response) => {
+router.get('/get', async (request, response) => {
     try {
         const stocks = await Watchlist.find({});
         return response.status(200).json(
@@ -52,9 +76,9 @@ router.get('/get/', async (request, response) => {
 
 // get a single stock
 // might contain some bugs
-router.get('/:ticker', async (request, response) => {
+router.get('/:id', async (request, response) => {
     try {
-        const { ticker } = request.params;
+        const { id } = request.params;
         const stock = Watchlist.findById(id);
 
         return response.status(200).json(stock);
