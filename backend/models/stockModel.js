@@ -6,22 +6,6 @@ const watchlistSchema = mongoose.Schema(
             type: String,
             required: true
         },
-        name: {
-            type: String,
-            required: true
-        },
-        c: {
-            type: Number,
-            required: true
-        },
-        d: {
-            type: Number,
-            required: true
-        },
-        dp: {
-            type: Number,
-            required: true
-        },
     },
     {
         timeStamp: true,

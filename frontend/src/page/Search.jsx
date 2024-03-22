@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import Footer from "../page/Footer.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
 import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
-import { Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
+import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import Highcharts from 'highcharts';
@@ -23,11 +24,15 @@ const Search = () => {
 	let [showModal, setShowModal] = useState(false);
 	let [arrowIcon, setArrowIcon] = useState(null);
 	let [priceColor, setPriceColor] = useState('');
+	let [marketStatusColor, setMarketStatusColor] = useState('');
 	let [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
 	let [hourlyData, setHourlyData] = useState(null);
 	let [recommendationData, setRecommendationData] = useState(null);
 	let [historicalData, setHistoricalData] = useState(null);
 	let [earningsData, setEarningsData] = useState(null);
+	let [portfolioData, setPortfolioData] = useState({});
+	let [quantity, setQuantity] = useState(0);
+	let [buyTotals, setBuyTotals] = useState(0);
 	const [searchTrigger, setSearchTrigger] = useState("");
 	let [totals, setTotals] = useState({
 		totalMspr: 0,
@@ -37,11 +42,36 @@ const Search = () => {
 		positiveChange: 0,
 		negativeChange: 0,
 	});
+	const [buyModal, setBuyModal] = useState(false)
+	const [sellModal, setSellModal] = useState(false)
 
 	const twitterBaseUrl = "https://twitter.com/intent/tweet";
 	const tweetText = encodeURIComponent(selectedNews?.headline);
 	const tweetUrl = encodeURIComponent(selectedNews?.url);
 	const twitterShareUrl = `${twitterBaseUrl}?text=${tweetText}&url=${tweetUrl}`;
+
+	const getMarketStatus = () => {
+		const currentTime = new Date();
+		const marketOpenTime = new Date(currentTime);
+		const marketCloseTime = new Date(currentTime);
+
+		// Assuming the market opens at 9:30 AM and closes at 4:00 PM in the current timezone
+		marketOpenTime.setHours(6, 0, 0); // Set to 9:30 AM
+		marketCloseTime.setHours(13, 0, 0); // Set to 4:00 PM
+
+		// Convert companyLatestPriceOfStock.t to a Date object
+		const latestPriceTime = new Date(companyLatestPriceOfStock?.t || 0);
+
+		// Decide the market status
+		const marketStatus = currentTime >= marketOpenTime && currentTime <= marketCloseTime
+			? "Market is Open"
+			: "Market is Closed";
+
+		return <>
+			<div>{marketStatus} - Current Time: {currentTime.toLocaleTimeString()}</div>
+			<div>Last Update: {latestPriceTime.toLocaleTimeString()}</div>
+		</>
+	}
 
 	let { ticker } = useParams();
 	const navigate = useNavigate();
@@ -52,7 +82,6 @@ const Search = () => {
 			return;
 		}
 		try {
-			console.log('try hui',)
 			const _stockInfo = await getStockInfo(symbol);
 			const _companyLatestPriceOfStock = await getCompanyLatestPriceOfStock(symbol);
 			const _companyPeers = await getCompanyPeers(symbol);
@@ -99,7 +128,6 @@ const Search = () => {
 			earningsData = processedHistoricalData(_earningsData?.data);
 			setEarningsData(earningsData);
 
-			console.log('historicalData', earningsData)
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -202,22 +230,10 @@ const Search = () => {
 		}
 	}, [stockInfo, inputValue, navigate]);
 
-	// const handleSubmit = (event) => {
-	// 	event.preventDefault();
-	// 	performSearch();
-	// };
-
 	const handleSubmit = (event) => {
 		event.preventDefault();
 		triggerSearch(inputValue);
 	};
-
-	// const handleSuggestionClick = (suggestion) => {
-	// 	setShowSuggestions(false);
-	// 	setInputValue(suggestion.symbol);
-	// 	setSuggestions([]);
-	// 	performSearchWithSymbol(suggestion.symbol);
-	// };
 
 	const handleSuggestionClick = (suggestion) => {
 		setInputValue(suggestion.symbol);
@@ -499,14 +515,16 @@ const Search = () => {
 		xAxis: {
 			type: 'datetime',
 			dateTimeLabelFormats: {
-				day: '%Y-%m-%d' // format for displaying the date in xAxis labels
-			},
-			title: {
-				text: 'Date'
+				day: '%Y-%m-%d'
 			},
 			labels: {
 				formatter: function () {
-					return Highcharts.dateFormat('%Y-%m-%d', this.value);
+					const point = earningsData.find(p => new Date(p.period).getTime() === this.value);
+					return `<span>${Highcharts.dateFormat('%Y-%m-%d', this.value)}</span><br/><span>${point ? point.surprise.toFixed(2) : ''}</span>`;
+				},
+				useHTML: true,
+				style: {
+					textAlign: 'center'
 				}
 			},
 		},
@@ -557,9 +575,92 @@ const Search = () => {
 		}]
 	};
 
+	const handleQuantityChange = (e) => {
+		const qty = Number(e.target.value);
+		setQuantity(qty);
+
+		const buyTotals = qty * roundNumber(companyLatestPriceOfStock?.c);
+		setBuyTotals(qty * companyLatestPriceOfStock?.c);
+	};
+
+	const handleBuy = (quantity, buyTotals) => {
+
+	}
+	const handleSell = (quantity, buyTotals) => {
+
+	}
+
+	const addToWatchlist = (ticker) => {
+
+	}
+
+	const buyOptions = () => {
+
+		return <>
+
+			{!portfolioData.length > 0 ?
+				<>
+					<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
+					<Button className='btn btn-danger px-3' onClick={() => setSellModal(!sellModal)}>sell</Button>
+				</>
+				:
+				<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
+			}
+
+			<Modal show={buyModal}>
+				<Modal.Header >
+					<Modal.Title>{stockInfo?.ticker} buy</Modal.Title>
+					<Button onClick={() => setBuyModal(!buyModal)}>x</Button>
+				</Modal.Header>
+				<Modal.Body className='fw-bold'>
+					<p>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</p>
+					<p>Money in Wallet: 0 {'paisa de re bhai backend se'}</p>
+					<Form.Group controlId="formQuantity">
+						<Form.Label>Quantity:</Form.Label>
+						<Form.Control
+							type="number"
+							value={quantity}
+							onChange={handleQuantityChange}
+						/>
+					</Form.Group>
+				</Modal.Body>
+				<Modal.Footer className='d-flex justify-content-between align-items-center'>
+					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
+					<Button variant="success" onClick={() => handleBuy(quantity, buyTotals)}>
+						Buy
+					</Button>
+				</Modal.Footer>
+			</Modal>
+			<Modal show={sellModal}>
+				<Modal.Header>
+					<Modal.Title>{stockInfo?.ticker} sell</Modal.Title>
+					<Button onClick={() => setSellModal(!sellModal)}>x</Button>
+
+				</Modal.Header>
+				<Modal.Body className='fw-bold'>
+					<p>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</p>
+					<p>Money in Wallet: 0 {'paisa de re bhai backend se'}</p>
+					<Form.Group controlId="formQuantity">
+						<Form.Label>Quantity:</Form.Label>
+						<Form.Control
+							type="number"
+							value={quantity}
+							onChange={handleQuantityChange}
+						/>
+					</Form.Group>
+				</Modal.Body>
+				<Modal.Footer className='d-flex justify-content-between align-items-center'>
+					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
+					<Button variant="success" onClick={() => handleSell(quantity, buyTotals)}>
+						Sell
+					</Button>
+				</Modal.Footer>
+			</Modal>
+		</>;
+	}
+
 	const searchTicker = (e) => {
 		try {
-			console.log('ticker', e)
 			setInputValue(e);
 		} catch (error) {
 			console.log('error', error)
@@ -623,12 +724,19 @@ const Search = () => {
 								<Row>
 									<Col className='text-center'>
 										<Row>
-											<h1>{stockInfo?.ticker} <i className="bi bi-star"></i> <i className="bi bi-star-fill" style={{ color: '#E2FC38' }}></i></h1>
+											<h1>
+												{stockInfo?.ticker}
+												{
+													<>
+														<i className="bi bi-star" onClick={() => addToWatchlist(stockInfo?.ticker)}></i>
+														<i className="bi bi-star-fill" style={{ color: '#F3D520' }}></i>
+													</>
+												}
+											</h1>
 											<h3>{stockInfo?.name}</h3>
 											<div>{stockInfo?.exchange}</div>
 											<div>
-												<Button className='btn btn-success me-3 px-3'>Buy</Button>
-												<Button className='btn btn-danger px-3'>sell</Button>
+												{buyOptions()}
 											</div>
 										</Row>
 									</Col>
@@ -642,7 +750,7 @@ const Search = () => {
 									</Col>
 								</Row>
 								<Row className='d-flex justify-content-center text-center red'>
-									Market closed on date
+									{getMarketStatus()}
 								</Row>
 							</div>
 							<div className="company-dashboard">
