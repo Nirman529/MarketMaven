@@ -4,7 +4,8 @@ const watchlistSchema = mongoose.Schema(
     {
         ticker: {
             type: String,
-            required: true
+            required: true,
+            unique: true
         },
     },
     {

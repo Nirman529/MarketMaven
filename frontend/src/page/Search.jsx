@@ -50,27 +50,20 @@ const Search = () => {
 	const tweetUrl = encodeURIComponent(selectedNews?.url);
 	const twitterShareUrl = `${twitterBaseUrl}?text=${tweetText}&url=${tweetUrl}`;
 
-	const getMarketStatus = () => {
+	const getMarketStatus = (timestamp) => {
 		const currentTime = new Date();
-		const marketOpenTime = new Date(currentTime);
-		const marketCloseTime = new Date(currentTime);
+		const marketTimestamp = new Date(timestamp);
+		const differenceInSeconds = (currentTime - marketTimestamp) / 1000;
 
-		// Assuming the market opens at 9:30 AM and closes at 4:00 PM in the current timezone
-		marketOpenTime.setHours(6, 0, 0); // Set to 9:30 AM
-		marketCloseTime.setHours(13, 0, 0); // Set to 4:00 PM
-
-		// Convert companyLatestPriceOfStock.t to a Date object
-		const latestPriceTime = new Date(companyLatestPriceOfStock?.t || 0);
-
-		// Decide the market status
-		const marketStatus = currentTime >= marketOpenTime && currentTime <= marketCloseTime
-			? "Market is Open"
-			: "Market is Closed";
-
-		return <>
-			<div>{marketStatus} - Current Time: {currentTime.toLocaleTimeString()}</div>
-			<div>Last Update: {latestPriceTime.toLocaleTimeString()}</div>
-		</>
+		return (
+			<>
+				{
+					differenceInSeconds < 60
+						? <div className='text-success'>Market is Open</div>
+						: <div className='text-danger'>Market is Closed on {getUnixDate(timestamp)}</div>
+				}
+			</>
+		);
 	}
 
 	let { ticker } = useParams();
@@ -721,7 +714,7 @@ const Search = () => {
 					stockInfo ?
 						<>
 							<div className="company-details mt-3">
-								<Row>
+								<Row className='m-0 p-0'>
 									<Col className='text-center'>
 										<Row>
 											<h1>
@@ -790,8 +783,8 @@ const Search = () => {
 									<Tab eventKey="news" title="Top News" transition={false} key="news">
 										<Row>
 											{news?.slice(0, 20).map((item, key) => {
-												return <>
-													<Col md={6} className="mb-4 hover-effect" key={key}>
+												return <div key={key}>
+													<Col md={6} className="mb-4 hover-effect">
 														<Card onClick={() => handleShow(item)}>
 															<Row className=''>
 																<img src={item.image} className="news-image m-3" alt="" />
@@ -803,7 +796,7 @@ const Search = () => {
 															</Row>
 														</Card>
 													</Col>
-												</>
+												</div>
 											})}
 										</Row>
 									</Tab>

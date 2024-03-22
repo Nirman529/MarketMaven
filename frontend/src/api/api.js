@@ -6,7 +6,7 @@ export const getStockInfo = async (ticker) => {
     //     await axios
     //         .get(`${apiLink}/api/company_description?symbol=${ticker}`)
     //         .then((response) => {
-            
+
     //         }).catch((error) => {
     //         console.log('error in fetchStockInfo', error)
     //     })
@@ -150,3 +150,17 @@ export const getEarningsData = async (inputValue) => {
         return [];
     }
 };
+
+export const getWatchlistData = async () => {
+    try {
+        const response = await fetch(`${apiLink}/watchlist/get`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.log('error in fetching watchlist data', error)
+        return [];
+    }
+}
