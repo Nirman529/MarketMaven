@@ -1,3 +1,5 @@
+import mongoose from 'mongoose'
+
 const portfolioSchema = mongoose.Schema(
     {
         ticker: {
@@ -18,9 +20,6 @@ const portfolioSchema = mongoose.Schema(
         totalCost: {
             type: Number
         },
-        change: {
-            type: Number
-        }
     },
     {
         timeStamp: true,
