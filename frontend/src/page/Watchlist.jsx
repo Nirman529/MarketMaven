@@ -1,49 +1,77 @@
 import React, { useEffect, useState } from 'react'
-import { getWatchlistData, getStockInfo } from '../api/api';
+import { removeFromWatchlist, getWatchlistData, getCompanyLatestPriceOfStock } from '../api/api';
+import { Row, Col, Card, Button } from 'react-bootstrap';
 
 const Watchlist = () => {
-
-	const [data, setData] = useState([]);
-	const [stockInfo, setStockInfo] = useState(null);
+	const [stockInfo, setStockInfo] = useState([]);
 	useEffect(() => {
-		const gettingdata = async () => {
-			const watchlistData = await getWatchlistData();
-			
-			const _stockInfo = await Promise.all(
-				data.map(async (item) => {
-					console.log('called', )
-					const response = await getStockInfo(item);
-					return await response.json();
-				})
-			)
-			// const borderCountr = await Promise.all(
-			// 	borders.map(async (border) => {
-			// 	  const response = await fetch(`https://restcountries.eu/rest/v2/alpha/${border}`);
-			// 	  return await response.json();
-			// 	})
-			//   );
-			setData(watchlistData.data);
-			setStockInfo(_stockInfo);
-		}
+		const fetchWatchlistAndStockInfo = async () => {
+			try {
+				const watchlistDataResponse = await getWatchlistData();
+				const _watchlistData = watchlistDataResponse.data;
+				const stockInfoPromises = _watchlistData.map(async (item) => {
+					try {
+						const latestPriceResponse = await getCompanyLatestPriceOfStock(item.ticker);
+						const latestPriceData = latestPriceResponse.data;
+						return { ...item, ...latestPriceData };
+					} catch (error) {
+						console.error(`Error fetching additional info for ticker ${item.ticker}:`, error);
+						return item;
+					}
+				});
+				const _stockInfo = await Promise.all(stockInfoPromises);
+				setStockInfo(_stockInfo);
+			} catch (error) {
+				console.error("Error fetching watchlist or stock info:", error);
+			}
+		};
+		fetchWatchlistAndStockInfo();
+	}, []);
 
-		gettingdata();
-	}, [])
+	const handleRemoveFromWatchlist = (ticker) => {
+		removeFromWatchlist(ticker)
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				console.log('Stock removed from watchlist:', data);
+				setStockInfo(stockInfo.filter(item => item.ticker !== ticker));
+			})
+			.catch(error => {
+				console.error('Failed to remove from watchlist:', error);
+			});
+	};
 
 	return (
-		<>			
-			<div>Watchlist</div>
-			{data?.map((item, key ) => {
-				return <div key={key}>
-					<div key={key}>{item.ticker}</div>
-				</div>
-			})}
-			<div>stockInfo: 	</div>
-			{stockInfo?.map((item, key ) => {
-				return <div key={key}>
-					<div key={key}>{item.ticker}</div>
-				</div>
-			})}
-		</>
+		<Col className='mx-3'>
+			<h2>My Watchlist</h2>
+			{stockInfo?.map((item, key) => (
+				<Card className="mb-3" key={key}>
+					<Card.Body>
+						<Button onClick={() => handleRemoveFromWatchlist(item?.ticker)}>x</Button>
+						<Row className='m-0 p-0'>
+							<Col>
+								<h3 className="me-2">{item?.ticker}</h3>
+								{item?.name}
+							</Col>
+							<Col className={`ms-1 ${item.d < 0 ? 'text-danger' : 'text-success'}`}>
+								<div className="">
+									<h3>
+										{item.c ? item.c.toFixed(2) : "N/A"}
+									</h3>
+									<div>
+										{item.d > 0 ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>}{item.d ? item.d.toFixed(2) : "N/A"} ({item.dp ? item.dp.toFixed(2) : "N/A"}%)
+									</div>
+								</div>
+							</Col>
+						</Row>
+					</Card.Body>
+				</Card>
+			))}
+		</Col>
 	)
 }
 

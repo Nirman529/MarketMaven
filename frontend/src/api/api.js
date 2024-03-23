@@ -164,3 +164,49 @@ export const getWatchlistData = async () => {
         return [];
     }
 }
+
+export const addToWatchlist = async (ticker, name) => {
+    const apiUrl = `${apiLink}/watchlist/add`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ticker, name }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Stock added to watchlist:', data);
+    } catch (error) {
+        console.error('Failed to add to watchlist:', error);
+    }
+};
+
+export const removeFromWatchlist = async (ticker) => {
+    const apiUrl = `${apiLink}/watchlist/remove/${ticker}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'DELETE',
+            headers: {
+                // Add any headers like Authorization if your API requires it
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Stock removed from watchlist:', data);
+        return data;
+    } catch (error) {
+        console.error('Failed to remove from watchlist:', error);
+    }
+};

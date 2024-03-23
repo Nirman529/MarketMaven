@@ -4,6 +4,10 @@
 	padding: 0;
 }
 
+.pointer {
+	cursor: pointer;
+}
+
 .navbar {
 	background-color: #000080;
 	color: white;

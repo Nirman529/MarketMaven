@@ -7,9 +7,13 @@ const watchlistSchema = mongoose.Schema(
             required: true,
             unique: true
         },
+        name: {
+            type: String,
+            required: true,
+        }
     },
     {
-        timeStamp: true,
+        timeStamps: true,
     }
 );
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Footer from "../page/Footer.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
+import { getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -24,7 +24,7 @@ const Search = () => {
 	let [showModal, setShowModal] = useState(false);
 	let [arrowIcon, setArrowIcon] = useState(null);
 	let [priceColor, setPriceColor] = useState('');
-	let [marketStatusColor, setMarketStatusColor] = useState('');
+	let [isInWatchlist, setIsInWatchlist] = useState(false);
 	let [companyInsiderInformation, setCompanyInsiderInformation] = useState(null);
 	let [hourlyData, setHourlyData] = useState(null);
 	let [recommendationData, setRecommendationData] = useState(null);
@@ -60,7 +60,7 @@ const Search = () => {
 				{
 					differenceInSeconds < 60
 						? <div className='text-success'>Market is Open</div>
-						: <div className='text-danger'>Market is Closed on {getUnixDate(timestamp)}</div>
+						: <div className='text-danger'>Market Closed on {getUnixDate(timestamp)}</div>
 				}
 			</>
 		);
@@ -121,6 +121,9 @@ const Search = () => {
 			earningsData = processedHistoricalData(_earningsData?.data);
 			setEarningsData(earningsData);
 
+			const watchlistData = await getWatchlistData();
+			const stockInWatchlist = watchlistData.some(stock => stock.ticker === stockInfo?.ticker);
+			setIsInWatchlist(stockInWatchlist);
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -160,6 +163,20 @@ const Search = () => {
 	const triggerSearch = (symbol) => {
 		setSearchTrigger(symbol);
 	};
+
+	useEffect(() => {
+		const fetchWatchlist = async () => {
+			try {
+				getWatchlistData();
+			} catch (error) {
+				console.error("Error fetching watchlist:", error);
+			}
+		};
+
+		if (stockInfo) {
+			fetchWatchlist();
+		}
+	}, [stockInfo]);
 
 	useEffect(() => {
 		if (searchTrigger) {
@@ -583,9 +600,15 @@ const Search = () => {
 
 	}
 
-	const addToWatchlist = (ticker) => {
+	const handleAddToWatchlist = async (ticker, name) => {
+		await addToWatchlist(ticker, name);
+		setIsInWatchlist(true);
+	};
 
-	}
+	const handleRemoveFromWatchlist = async (ticker) => {
+		await removeFromWatchlist(ticker);
+		setIsInWatchlist(false);
+	};
 
 	const buyOptions = () => {
 
@@ -719,12 +742,11 @@ const Search = () => {
 										<Row>
 											<h1>
 												{stockInfo?.ticker}
-												{
-													<>
-														<i className="bi bi-star" onClick={() => addToWatchlist(stockInfo?.ticker)}></i>
-														<i className="bi bi-star-fill" style={{ color: '#F3D520' }}></i>
-													</>
-												}
+												{!isInWatchlist ? (
+													<i className="bi bi-star pointer" onClick={() => handleAddToWatchlist(stockInfo?.ticker, stockInfo?.name)}></i>
+												) : (
+													<i className="bi bi-star-fill" onClick={() => handleRemoveFromWatchlist(stockInfo?.ticker)} style={{ color: '#F3D520' }}></i>
+												)}
 											</h1>
 											<h3>{stockInfo?.name}</h3>
 											<div>{stockInfo?.exchange}</div>
@@ -743,7 +765,7 @@ const Search = () => {
 									</Col>
 								</Row>
 								<Row className='d-flex justify-content-center text-center red'>
-									{getMarketStatus()}
+									{getMarketStatus(companyLatestPriceOfStock?.t)}
 								</Row>
 							</div>
 							<div className="company-dashboard">
