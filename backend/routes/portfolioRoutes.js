@@ -4,14 +4,14 @@ const router = express.Router();
 
 router.post('/add', async (request, response) => {
     try {
-        const { ticker, name } = request.body;
-        if (!ticker || !name) {
+        const { ticker, name, quantity, avgCost, totalCost } = request.body;
+        if (!ticker || !name || !quantity || !avgCost || !totalCost) {
             return response.status(400).send({
-                message: 'Please send all required fields: ticker and name.'
+                message: 'Please send all required fields: ticker, name, quantity, avgCost, totalCost.'
             });
         }
 
-        const newStock = { ticker, name };
+        const newStock = { ticker, name, quantity, avgCost, totalCost };
         const stock = await Portfolio.create(newStock);
 
         return response.status(201).send(stock);
