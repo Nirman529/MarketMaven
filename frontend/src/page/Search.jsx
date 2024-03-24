@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Footer from "../page/Footer.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
+import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -46,11 +46,14 @@ const Search = () => {
 	});
 	const [buyModal, setBuyModal] = useState(false)
 	const [sellModal, setSellModal] = useState(false)
+	const [isStockInPortfolio, setIsStockInPortfolio] = useState(false);
 
 	const twitterBaseUrl = "https://twitter.com/intent/tweet";
 	const tweetText = encodeURIComponent(selectedNews?.headline);
 	const tweetUrl = encodeURIComponent(selectedNews?.url);
 	const twitterShareUrl = `${twitterBaseUrl}?text=${tweetText}&url=${tweetUrl}`;
+	let { ticker } = useParams();
+	const navigate = useNavigate();
 
 	const getMarketStatus = (timestamp) => {
 		const currentTime = new Date();
@@ -68,8 +71,19 @@ const Search = () => {
 		);
 	}
 
-	let { ticker } = useParams();
-	const navigate = useNavigate();
+	useEffect(() => {
+		performSearchWithSymbol(ticker);
+	}, [ticker]);
+
+	const checkIfInPortfolio = async (ticker) => {
+		try {
+			const portfolioData = await getPortfolioData();
+			const stockInPortfolio = portfolioData.data.some(stock => stock.ticker === ticker.toUpperCase());
+			setIsStockInPortfolio(stockInPortfolio);
+		} catch (error) {
+			console.error("Error checking portfolio:", error);
+		}
+	};
 
 	const performSearchWithSymbol = async (symbol) => {
 		if (!symbol) {
@@ -124,6 +138,7 @@ const Search = () => {
 			setEarningsData(earningsData);
 
 			checkIfInWatchlist(symbol);
+			checkIfInPortfolio(ticker);
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -156,8 +171,9 @@ const Search = () => {
 		if (!inputValue.trim()) {
 			console.log("Input value is empty.");
 			return;
+		} else {
+			navigate(`/search/${inputValue}`)
 		}
-		performSearchWithSymbol(inputValue);
 	}
 
 	const triggerSearch = (symbol) => {
@@ -178,11 +194,11 @@ const Search = () => {
 		}
 	}, [stockInfo]);
 
-	useEffect(() => {
-		if (searchTrigger) {
-			performSearchWithSymbol(searchTrigger);
-		}
-	}, [searchTrigger]);
+	// useEffect(() => {
+	// 	if (searchTrigger) {
+	// 		performSearchWithSymbol(searchTrigger);
+	// 	}
+	// }, [searchTrigger]);
 
 	useEffect(() => {
 		if (companyInsiderInformation?.length > 0) {
@@ -248,7 +264,7 @@ const Search = () => {
 	};
 
 	const handleSuggestionClick = (suggestion) => {
-		const upper = suggestion.symbol.toUpperCase();
+		const upper = suggestion;
 		setInputValue(upper);
 		triggerSearch(upper);
 	};
@@ -596,13 +612,37 @@ const Search = () => {
 		setBuyTotals(qty * companyLatestPriceOfStock?.c);
 	};
 
-	const handleBuy = (quantity, buyTotals) => {
+	const handleBuy = async () => {
+		if (!quantity || quantity <= 0 || !stockInfo) {
+			console.log("Invalid quantity or stock information missing");
+			return;
+		}
+		const purchasePrice = companyLatestPriceOfStock?.c; // Current price
+		const ticker = stockInfo?.ticker; // Stock ticker symbol
+		const name = stockInfo?.name; // Stock name
+		try {
+			await addToPortfolio(ticker, name, quantity, purchasePrice);
+			console.log("Stock purchased and added to portfolio");
+			// Optional: Update UI or state to reflect the change
+		} catch (error) {
+			console.error("Failed to buy stock:", error);
+		}
+	};
 
-	}
-	const handleSell = (quantity, buyTotals) => {
-
-	}
-
+	const handleSell = async () => {
+		if (!quantity || quantity <= 0 || !stockInfo) {
+			console.log("Invalid quantity or stock information missing");
+			return;
+		}
+		const sellPrice = companyLatestPriceOfStock?.c; // Current price for selling
+		const ticker = stockInfo?.ticker; // Stock ticker symbol
+		try {
+			await removeFromPortfolio(ticker, quantity, sellPrice);
+			console.log("Stock sold and portfolio updated");
+		} catch (error) {
+			console.error("Failed to sell stock:", error);
+		}
+	};
 	const checkIfInWatchlist = async (tick) => {
 		try {
 			console.log('tick', tick)
@@ -635,13 +675,17 @@ const Search = () => {
 
 	const buyOptions = () => {
 		return <>
-			{!portfolioData.length > 0 ?
-				<>
-					<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
-					<Button className='btn btn-danger px-3' onClick={() => setSellModal(!sellModal)}>sell</Button>
-				</>
+			{!isStockInPortfolio ?
+				(
+					<>
+						<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
+						<Button className='btn btn-danger px-3' onClick={() => setSellModal(!sellModal)}>sell</Button>
+					</>
+				)
 				:
-				<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
+				(
+					<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
+				)
 			}
 			<Modal show={buyModal}>
 				<Modal.Header >
@@ -662,7 +706,7 @@ const Search = () => {
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
-					<Button variant="success" onClick={() => handleBuy(quantity, buyTotals)}>
+					<Button className='btn btn-success me-3 px-3' onClick={handleBuy}>
 						Buy
 					</Button>
 				</Modal.Footer>
@@ -686,7 +730,7 @@ const Search = () => {
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
-					<Button variant="success" onClick={() => handleSell(quantity, buyTotals)}>
+					<Button className='btn btn-danger px-3' onClick={handleSell}>
 						Sell
 					</Button>
 				</Modal.Footer>
@@ -724,7 +768,7 @@ const Search = () => {
 						{showSuggestions && suggestions?.length > 0 ? (
 							<ul className="suggestions-list ms-3 m-0 p-0">
 								{suggestions?.slice(0, 5).map((suggestion, index) => (
-									<li className='' key={index} onClick={() => handleSuggestionClick(suggestion)}>
+									<li className='' key={index} onClick={(suggestion) => handleSuggestionClick(suggestion.symbol)}>
 										{suggestion.symbol} | {suggestion.description}
 									</li>
 								))}
@@ -808,6 +852,7 @@ const Search = () => {
 														<div className='mt-2'><span className='fw-bold'>Webpage:</span> <a href={stockInfo?.weburl} target="_blank" rel="noreferrer">{stockInfo?.weburl}</a></div>
 														<div className='fw-bold mt-2'>Company peers:</div>
 														<p className='mt-2'>{companyPeers?.map((item, key) => {
+															// return <a key={item} onClick={() => searchTicker(item)}>{item}, </a>
 															return <span key={item} className='anchor-tag' onClick={() => searchTicker(item)}>{item}, </span>;
 														})}</p>
 													</Col>
