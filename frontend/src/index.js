@@ -1,12 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import MyStore from './redux/store/MyStore';
-import { Provider } from 'react-redux';
+import { SearchProvider } from './SearchContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <Provider store = {MyStore}>
+  <SearchProvider>
     <App />
-  </Provider>
+  </SearchProvider>
 );

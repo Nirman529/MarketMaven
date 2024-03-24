@@ -4,7 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import watchlistRoutes from './routes/watchlistRoutes.js'
 import apiRoutes from './routes/apiRoutes.js'
-// import portfolioRoutes from './routes/portfolioRoutes.js'
+import portfolioRoutes from './routes/portfolioRoutes.js'
 
 const app = express();
 
@@ -17,7 +17,7 @@ app.get('/', (request, response) => {
     return response.status(234).send('Hello World!');
 });
 
-// app.use('/portfolio', portfolioRoutes);
+app.use('/portfolio', portfolioRoutes);
 app.use('/watchlist', watchlistRoutes);
 app.use('/api', apiRoutes);
 

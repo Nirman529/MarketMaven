@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { removeFromWatchlist, getWatchlistData, getCompanyLatestPriceOfStock } from '../api/api';
 import { Row, Col, Card, Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 const Watchlist = () => {
+	const navigate = useNavigate();
 	const [stockInfo, setStockInfo] = useState([]);
 	useEffect(() => {
 		const fetchWatchlistAndStockInfo = async () => {
@@ -28,28 +30,20 @@ const Watchlist = () => {
 		fetchWatchlistAndStockInfo();
 	}, []);
 
-	const handleRemoveFromWatchlist = (ticker) => {
-		removeFromWatchlist(ticker)
-			.then(response => {
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-				return response.json();
-			})
-			.then(data => {
-				console.log('Stock removed from watchlist:', data);
-				setStockInfo(stockInfo.filter(item => item.ticker !== ticker));
-			})
-			.catch(error => {
-				console.error('Failed to remove from watchlist:', error);
-			});
+	const handleRemoveFromWatchlist = async (ticker) => {
+		try {
+			await removeFromWatchlist(ticker);
+			setStockInfo(currentStockInfo => currentStockInfo.filter(item => item.ticker !== ticker));
+		} catch (error) {
+			console.error('Failed to remove from watchlist:', error);
+		}
 	};
 
 	return (
 		<Col className='mx-3'>
 			<h2>My Watchlist</h2>
 			{stockInfo?.map((item, key) => (
-				<Card className="mb-3" key={key}>
+				<Card className="mb-3" key={key} onClick={() => navigate(`/search/${item?.ticker}`)} style={{ cursor: 'pointer' }}>
 					<Card.Body>
 						<Button onClick={() => handleRemoveFromWatchlist(item?.ticker)}>x</Button>
 						<Row className='m-0 p-0'>

@@ -10,8 +10,10 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useSearch } from '../SearchContext.js';
 
 const Search = () => {
+	const { searchData, setSearchData } = useSearch();
 	let [inputValue, setInputValue] = useState("");
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
@@ -121,9 +123,7 @@ const Search = () => {
 			earningsData = processedHistoricalData(_earningsData?.data);
 			setEarningsData(earningsData);
 
-			const watchlistData = await getWatchlistData();
-			const stockInWatchlist = watchlistData.some(stock => stock.ticker === stockInfo?.ticker);
-			setIsInWatchlist(stockInWatchlist);
+			checkIfInWatchlist(symbol);
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -242,12 +242,15 @@ const Search = () => {
 
 	const handleSubmit = (event) => {
 		event.preventDefault();
-		triggerSearch(inputValue);
+		const upper = inputValue.toUpperCase();
+		setInputValue(upper);
+		triggerSearch(upper);
 	};
 
 	const handleSuggestionClick = (suggestion) => {
-		setInputValue(suggestion.symbol);
-		triggerSearch(suggestion.symbol);
+		const upper = suggestion.symbol.toUpperCase();
+		setInputValue(upper);
+		triggerSearch(upper);
 	};
 
 	const isValid = (item) => {
@@ -256,7 +259,7 @@ const Search = () => {
 	}
 
 	const autoComplete = (e) => {
-		setInputValue(e.target.value);
+		setInputValue(e.target.value.toUpperCase());
 		setShowSuggestions(true);
 	}
 
@@ -600,20 +603,38 @@ const Search = () => {
 
 	}
 
+	const checkIfInWatchlist = async (tick) => {
+		try {
+			console.log('tick', tick)
+			const watchlistData = await getWatchlistData();
+			const stockInWatchlist = watchlistData.data.some(stock => stock.ticker === tick);
+			console.log('stockInWatchlist', stockInWatchlist)
+			setIsInWatchlist(stockInWatchlist);
+		} catch (error) {
+			console.error("Error checking watchlist:", error);
+		}
+	};
+
 	const handleAddToWatchlist = async (ticker, name) => {
-		await addToWatchlist(ticker, name);
-		setIsInWatchlist(true);
+		try {
+			await addToWatchlist(ticker, name);
+			checkIfInWatchlist(ticker);
+		} catch (error) {
+			console.error('Failed to add to watchlist:', error);
+		}
 	};
 
 	const handleRemoveFromWatchlist = async (ticker) => {
-		await removeFromWatchlist(ticker);
-		setIsInWatchlist(false);
+		try {
+			await removeFromWatchlist(ticker);
+			checkIfInWatchlist(ticker);
+		} catch (error) {
+			console.error('Failed to remove from watchlist:', error);
+		}
 	};
 
 	const buyOptions = () => {
-
 		return <>
-
 			{!portfolioData.length > 0 ?
 				<>
 					<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
@@ -622,7 +643,6 @@ const Search = () => {
 				:
 				<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
 			}
-
 			<Modal show={buyModal}>
 				<Modal.Header >
 					<Modal.Title>{stockInfo?.ticker} buy</Modal.Title>
@@ -651,7 +671,6 @@ const Search = () => {
 				<Modal.Header>
 					<Modal.Title>{stockInfo?.ticker} sell</Modal.Title>
 					<Button onClick={() => setSellModal(!sellModal)}>x</Button>
-
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<p>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</p>
@@ -745,7 +764,7 @@ const Search = () => {
 												{!isInWatchlist ? (
 													<i className="bi bi-star pointer" onClick={() => handleAddToWatchlist(stockInfo?.ticker, stockInfo?.name)}></i>
 												) : (
-													<i className="bi bi-star-fill" onClick={() => handleRemoveFromWatchlist(stockInfo?.ticker)} style={{ color: '#F3D520' }}></i>
+													<i className="bi bi-star-fill pointer" onClick={() => handleRemoveFromWatchlist(stockInfo?.ticker)} style={{ color: '#F3D520' }}></i>
 												)}
 											</h1>
 											<h3>{stockInfo?.name}</h3>

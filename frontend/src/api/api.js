@@ -151,6 +151,7 @@ export const getEarningsData = async (inputValue) => {
     }
 };
 
+// -------------------------watchlist apis
 export const getWatchlistData = async () => {
     try {
         const response = await fetch(`${apiLink}/watchlist/get`);
@@ -208,5 +209,75 @@ export const removeFromWatchlist = async (ticker) => {
         return data;
     } catch (error) {
         console.error('Failed to remove from watchlist:', error);
+    }
+};
+
+// ------------------------- portfolio apis
+
+export const getPortfolioData = async () => {
+    try {
+        const response = await fetch(`${apiLink}/portfolio/get`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.log('error in fetching watchlist data', error)
+        return [];
+    }
+}
+export const addToPortfolio = async (ticker, name, quantity, avgCost) => {
+    const apiUrl = `${apiLink}/portfolio/add`;
+    const totalCost = quantity * avgCost;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ticker, name, quantity, avgCost, totalCost }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Stock added to portfolio:', data);
+    } catch (error) {
+        console.error('Failed to add to portfolio:', error);
+    }
+};
+
+export const removeFromPortfolio = async (ticker, quantity, sellPrice) => {
+    const apiUrl = `${apiLink}/portfolio/update/sell/${ticker}`;
+    // Assume you sell some amount of stock at a given price and need to update the portfolio
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ quantity, sellPrice }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Updated portfolio after selling stock:', data);
+    } catch (error) {
+        console.error('Failed to update portfolio after selling:', error);
     }
 };

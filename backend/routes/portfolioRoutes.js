@@ -2,29 +2,6 @@ import express from 'express';
 import { Portfolio } from '../models/portfolioModel.js';
 const router = express.Router();
 
-router.post('/add', async (request, response) => {
-    try {
-        const { ticker, name, quantity, avgCost, totalCost } = request.body;
-        if (!ticker || !name || !quantity || !avgCost || !totalCost) {
-            return response.status(400).send({
-                message: 'Please send all required fields: ticker, name, quantity, avgCost, totalCost.'
-            });
-        }
-
-        const newStock = { ticker, name, quantity, avgCost, totalCost };
-        const stock = await Portfolio.create(newStock);
-
-        return response.status(201).send(stock);
-    } catch (error) {
-        console.error('Error when adding to portfolio: ', error.message);
-        if (error.code === 11000) {
-            return response.status(409).send({ message: 'Ticker or name already exists in the portfolio.' });
-        }
-        return response.status(500).send({ message: error.message });
-    }
-});
-
-
 // get all the stocks
 router.get('/get', async (request, response) => {
     try {
@@ -36,39 +13,68 @@ router.get('/get', async (request, response) => {
             }
         );
     } catch (error) {
-        console.log(error.message);
-        response.status(500).send({ message: error.message })
+        console.error("Error fetching portfolio data:", error);
+        response.status(500).send({ message: "An error occurred while fetching the portfolio data." });
     }
 });
 
-// get a single stock
-// might contain some bugs
-router.get('/:id', async (request, response) => {
+router.post('/update/buy/:ticker', async (request, response) => {
+    const { ticker } = request.params;
+    const { name, quantity, purchasePrice } = request.body;
     try {
-        const { id } = request.params;
-        const stock = Portfolio.findById(id);
+        let stock = await Portfolio.findOne({ ticker: ticker.toUpperCase() });
+        if (stock) {
+            const newTotalQuantity = stock.quantity + quantity;
+            stock.totalCost += (purchasePrice * quantity);
+            stock.avgCost = stock.totalCost / newTotalQuantity;
+            stock.quantity = newTotalQuantity;
 
-        return response.status(200).json(stock);
+            await stock.save();
+            response.status(200).send(stock);
+        } else {
+            const totalCost = purchasePrice * quantity;
+            const newStock = new Portfolio({
+                ticker: ticker.toUpperCase(),
+                name: name,
+                quantity: quantity,
+                avgCost: purchasePrice,
+                totalCost: totalCost
+            });
+            await newStock.save();
+            response.status(201).send(newStock);
+        }
     } catch (error) {
-        console.log('error.message', error.message);
+        console.error('Error when buying stock: ', error.message);
         response.status(500).send({ message: error.message });
     }
 });
 
-
-// delete stock
-router.delete('/remove/:ticker', async (request, response) => {
+router.post('/update/sell/:ticker', async (request, response) => {
     const { ticker } = request.params;
+    const { quantity, sellPrice } = request.body;
     try {
-        const deletedStock = await Portfolio.findOneAndDelete({ ticker });
-        if (!deletedStock) {
-            return response.status(404).send({
-                message: `Stock with ticker ${ticker} not found`
-            });
+        let stock = await Portfolio.findOne({ ticker: ticker.toUpperCase() });
+        if (stock) {
+            if (quantity > stock.quantity) {
+                return response.status(400).send({ message: "Sell quantity is greater than the available stock." });
+            }
+            const newTotalQuantity = stock.quantity - quantity;
+            if (newTotalQuantity === 0) {
+                await Portfolio.findOneAndDelete({ ticker: ticker.toUpperCase() });
+                return response.status(200).send({ message: "Stock sold and removed from portfolio as quantity reached zero." });
+            } else {
+                stock.totalCost -= sellPrice * quantity;
+                stock.avgCost = stock.totalCost / newTotalQuantity;
+                stock.quantity = newTotalQuantity;
+
+                await stock.save();
+                return response.status(200).send(stock);
+            }
+        } else {
+            return response.status(404).send({ message: "Stock not found in the portfolio." });
         }
-        response.status(200).send({ message: 'Stock removed from portfolio' });
     } catch (error) {
-        console.error('error.message:', error.message);
+        console.error('Error when selling stock: ', error.message);
         response.status(500).send({ message: error.message });
     }
 });
