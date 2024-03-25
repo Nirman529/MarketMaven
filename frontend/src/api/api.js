@@ -248,13 +248,16 @@ export const addToPortfolio = async (ticker, name, quantity, avgCost) => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json(); // assuming your server responds with JSON-formatted error details
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
         }
 
         const data = await response.json();
         console.log('Stock added to portfolio:', data);
+        return data; // Return the data for further processing if necessary
     } catch (error) {
         console.error('Failed to add to portfolio:', error);
+        throw error; // Re-throw the error to handle it in the calling function
     }
 };
 
@@ -272,12 +275,79 @@ export const removeFromPortfolio = async (ticker, quantity, sellPrice) => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json(); // assuming your server responds with JSON-formatted error details
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
         }
 
         const data = await response.json();
         console.log('Updated portfolio after selling stock:', data);
+        return data; // Return the data for further processing if necessary
     } catch (error) {
         console.error('Failed to update portfolio after selling:', error);
+        throw error; // Re-throw the error to handle it in the calling function
+    }
+};
+
+// ----------------------- wallet
+
+export const getWalletBalance = async () => {
+    try {
+        const response = await fetch(`${apiLink}/wallet/get`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+    }
+};
+
+export const depositToWallet = async (amount) => {
+    try {
+        const response = await fetch(`${apiLink}/wallet/deposit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error depositing to wallet:', error);
+    }
+};
+
+export const withdrawFromWallet = async (amount) => {
+    try {
+        const response = await fetch(`${apiLink}/wallet/withdraw`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error withdrawing from wallet:', error);
     }
 };

@@ -43,7 +43,7 @@ const Watchlist = () => {
 		<Col className='mx-3'>
 			<h2>My Watchlist</h2>
 			{stockInfo?.map((item, key) => (
-				<Card className="mb-3" key={key} onClick={() => navigate(`/search/${item?.ticker}`)} style={{ cursor: 'pointer' }}>
+				<Card className="mb-3" key={key} onClick={() => navigate(`/search/${item.ticker}`)} style={{ cursor: 'pointer' }}>
 					<Card.Body>
 						<Button onClick={() => handleRemoveFromWatchlist(item?.ticker)}>x</Button>
 						<Row className='m-0 p-0'>

@@ -4,6 +4,13 @@
 	padding: 0;
 }
 
+.clear-background {
+	background-color: transparent;
+	border-color: transparent;
+	color: #0A64F5;
+	text-decoration: underline;
+}
+
 .pointer {
 	cursor: pointer;
 }
@@ -157,8 +164,8 @@
 }
 
 .anchor-tag {
-	color: #000080;
-	border-bottom: 1px solid #000080;
+	color: #0D6EFD;
+	border-bottom: 1px solid #0D6EFD;
 	cursor: pointer;
 }
 

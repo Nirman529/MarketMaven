@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import watchlistRoutes from './routes/watchlistRoutes.js'
 import apiRoutes from './routes/apiRoutes.js'
 import portfolioRoutes from './routes/portfolioRoutes.js'
+import walletRoutes from './routes/walletRoutes.js'
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get('/', (request, response) => {
 
 app.use('/portfolio', portfolioRoutes);
 app.use('/watchlist', watchlistRoutes);
+app.use('/wallet', walletRoutes);
 app.use('/api', apiRoutes);
 
 mongoose

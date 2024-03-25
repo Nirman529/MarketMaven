@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Footer from "../page/Footer.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData } from "../api/api.js";
+import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -47,6 +47,7 @@ const Search = () => {
 	const [buyModal, setBuyModal] = useState(false)
 	const [sellModal, setSellModal] = useState(false)
 	const [isStockInPortfolio, setIsStockInPortfolio] = useState(false);
+	const [balance, setBalance] = useState(null);
 
 	const twitterBaseUrl = "https://twitter.com/intent/tweet";
 	const tweetText = encodeURIComponent(selectedNews?.headline);
@@ -90,55 +91,58 @@ const Search = () => {
 			console.log("Please enter a ticker symbol to search.");
 			return;
 		}
+
 		try {
-			const _stockInfo = await getStockInfo(symbol);
-			const _companyLatestPriceOfStock = await getCompanyLatestPriceOfStock(symbol);
-			const _companyPeers = await getCompanyPeers(symbol);
-			const _news = await getNews(symbol);
-			const validNews = await _news?.data.filter(isValid);
-			const _companyInsiderInformation = await getCompanyInsiderInformation(symbol);
-			const _hourlyData = await getHourlyData(symbol);
-			const priceChange = companyLatestPriceOfStock?.d;
-			const isPriceUp = priceChange > 0;
-			const _recommendationData = await getRecommendationData(symbol);
-			const _historicalData = await getHistoricalData(symbol);
-			const _earningsData = await getEarningsData(symbol);
+			// Construct an array of promises for the various data fetches
+			const dataFetchPromises = [
+				getStockInfo(symbol),
+				getCompanyLatestPriceOfStock(symbol),
+				getCompanyPeers(symbol),
+				getNews(symbol),
+				getCompanyInsiderInformation(symbol),
+				getHourlyData(symbol),
+				getRecommendationData(symbol),
+				getHistoricalData(symbol),
+				getEarningsData(symbol),
+				getWalletBalance()
+			];
 
-			hourlyData = await convertData(_hourlyData?.data.results)
-			setHourlyData(hourlyData);
+			// Destructure the resolved values from the promises
+			const [
+				_stockInfo,
+				_companyLatestPriceOfStock,
+				_companyPeers,
+				_news,
+				_companyInsiderInformation,
+				_hourlyData,
+				_recommendationData,
+				_historicalData,
+				_earningsData,
+				_walletBalance
+			] = await Promise.all(dataFetchPromises);
 
-			companyLatestPriceOfStock = _companyLatestPriceOfStock.data;
-			setCompanyLatestPriceOfStock(companyLatestPriceOfStock);
+			// Validate news items
+			const validNews = _news?.data.filter(isValid);
 
-			companyPeers = _companyPeers?.data;
-			setCompanyPeers(companyPeers);
-
-			stockInfo = _stockInfo?.data;
-			setStockInfo(stockInfo);
-
-			priceColor = isPriceUp ? 'green' : 'red';
-			setPriceColor(priceColor);
-
-			arrowIcon = isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>;
-			setArrowIcon(arrowIcon);
-
-			companyInsiderInformation = await _companyInsiderInformation?.data.data;
-			setCompanyInsiderInformation(companyInsiderInformation);
-
-			news = validNews;
-			setNews(news);
-
-			// recommendationData = _recommendationData?.data;
+			// Set the state for each piece of data
+			setStockInfo(_stockInfo?.data);
+			setCompanyLatestPriceOfStock(_companyLatestPriceOfStock.data);
+			setCompanyPeers(_companyPeers?.data);
+			setNews(validNews);
+			setCompanyInsiderInformation(_companyInsiderInformation?.data.data);
+			setHourlyData(convertData(_hourlyData?.data.results));
 			setRecommendationData(_recommendationData?.data);
+			setHistoricalData(_historicalData?.data.results);
+			setEarningsData(processedHistoricalData(_earningsData?.data));
+			const isPriceUp = _companyLatestPriceOfStock.data?.d > 0;
+			setPriceColor(isPriceUp ? 'green' : 'red');
+			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>);
+			setBalance(_walletBalance.balance);
 
-			historicalData = _historicalData?.data.results;
-			setHistoricalData(historicalData);
-
-			earningsData = processedHistoricalData(_earningsData?.data);
-			setEarningsData(earningsData);
-
+			// Additional checks for watchlist and portfolio
 			checkIfInWatchlist(symbol);
-			checkIfInPortfolio(ticker);
+			checkIfInPortfolio(symbol);
+			console.log('balance', balance)
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -675,7 +679,7 @@ const Search = () => {
 
 	const buyOptions = () => {
 		return <>
-			{!isStockInPortfolio ?
+			{isStockInPortfolio ?
 				(
 					<>
 						<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
@@ -689,48 +693,63 @@ const Search = () => {
 			}
 			<Modal show={buyModal}>
 				<Modal.Header >
-					<Modal.Title>{stockInfo?.ticker} buy</Modal.Title>
-					<Button onClick={() => setBuyModal(!buyModal)}>x</Button>
+					<Modal.Title className='flex-grow-1'>{stockInfo?.ticker}</Modal.Title>
+					<button className="clear-background" onClick={() => setBuyModal(!buyModal)}>x</button>
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
-					<p>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</p>
-					<p>Money in Wallet: 0 {'paisa de re bhai backend se'}</p>
-					<Form.Group controlId="formQuantity">
-						<Form.Label>Quantity:</Form.Label>
-						<Form.Control
-							type="number"
-							value={quantity}
-							onChange={handleQuantityChange}
-						/>
+					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
+					<div className='m-0'>Money in Wallet: {balance}</div>
+
+					<Form.Group as={Row} className='m-0 my-1 align-items-center' controlId="formQuantity">
+						Quantity:
+						<Col>
+							<Form.Control
+								type="number"
+								value={quantity}
+								onChange={handleQuantityChange}
+								min="1"
+								step="1"
+							/>
+						</Col>
 					</Form.Group>
+					{
+						companyLatestPriceOfStock?.c * quantity > balance ? <div className='text-danger'>Not enough money in wallet!</div> : <></>
+					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
-					<Button className='btn btn-success me-3 px-3' onClick={handleBuy}>
+					<Button className='btn btn-success me-3 px-3' onClick={handleBuy} disabled={companyLatestPriceOfStock?.c * quantity > balance}>
 						Buy
 					</Button>
 				</Modal.Footer>
 			</Modal>
 			<Modal show={sellModal}>
 				<Modal.Header>
-					<Modal.Title>{stockInfo?.ticker} sell</Modal.Title>
-					<Button onClick={() => setSellModal(!sellModal)}>x</Button>
+					<Modal.Title className='flex-grow-1'>{stockInfo?.ticker}</Modal.Title>
+					<button className="clear-background" onClick={() => setSellModal(!sellModal)}>x</button>
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
-					<p>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</p>
-					<p>Money in Wallet: 0 {'paisa de re bhai backend se'}</p>
-					<Form.Group controlId="formQuantity">
-						<Form.Label>Quantity:</Form.Label>
-						<Form.Control
-							type="number"
-							value={quantity}
-							onChange={handleQuantityChange}
-						/>
+					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
+					<div className='m-0'>Money in Wallet: {balance}</div>
+					<Form.Group as={Row} className="m-0 my-1 align-items-center">
+						Quantity:
+						<Col>
+							<Form.Control
+								type="number"
+								value={quantity}
+								onChange={handleQuantityChange}
+								min="1"
+								step="1"
+							/>
+						</Col>
 					</Form.Group>
+					{
+						// quantity > selectedStock?.quantity ? <div className='text-danger'>You cannot sell the stocks you don't have!</div> : <></>
+					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
-					<Button className='btn btn-danger px-3' onClick={handleSell}>
+					<Button className='btn btn-success px-3' onClick={handleSell}>
 						Sell
 					</Button>
 				</Modal.Footer>
