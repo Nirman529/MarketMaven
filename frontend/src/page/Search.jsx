@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Footer from "../page/Footer.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
@@ -10,10 +9,10 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useSearch } from '../SearchContext.js';
+// import { useSearch } from '../SearchContext.js';
 
 const Search = () => {
-	const { searchData, setSearchData } = useSearch();
+	// const { searchData, setSearchData } = useSearch();
 	let [inputValue, setInputValue] = useState("");
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
@@ -180,8 +179,8 @@ const Search = () => {
 		}
 	}
 
-	const triggerSearch = (symbol) => {
-		setSearchTrigger(symbol);
+	const triggerSearch = (currentValue) => {
+		performSearchWithSymbol(currentValue);
 	};
 
 	useEffect(() => {
@@ -825,9 +824,9 @@ const Search = () => {
 											<h1>
 												{stockInfo?.ticker}
 												{!isInWatchlist ? (
-													<i className="bi bi-star pointer" onClick={() => handleAddToWatchlist(stockInfo?.ticker, stockInfo?.name)}></i>
+													<i className="bi bi-star ms-3 pointer" onClick={() => handleAddToWatchlist(stockInfo?.ticker, stockInfo?.name)}></i>
 												) : (
-													<i className="bi bi-star-fill pointer" onClick={() => handleRemoveFromWatchlist(stockInfo?.ticker)} style={{ color: '#F3D520' }}></i>
+													<i className="bi bi-star-fill ms-3 pointer" onClick={() => handleRemoveFromWatchlist(stockInfo?.ticker)} style={{ color: '#F3D520' }}></i>
 												)}
 											</h1>
 											<h3>{stockInfo?.name}</h3>

@@ -26,11 +26,18 @@
 	text-decoration: none;
 }
 
-.head-link:hover {
-	border: 1px solid white;
+.head-link {
+	padding: 2px;
+	margin-right: 1rem;
+	border: 1px solid transparent;
+	cursor: pointer;
 	border-radius: 15px;
 	color: white;
 	text-decoration: none;
+}
+
+.head-link:hover {
+	border-color: white;
 }
 
 .main-content {
