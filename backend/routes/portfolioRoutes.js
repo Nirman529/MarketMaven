@@ -25,7 +25,7 @@ router.post('/update/buy/:ticker', async (request, response) => {
         let stock = await Portfolio.findOne({ ticker: ticker.toUpperCase() });
         if (stock) {
             const newTotalQuantity = stock.quantity + quantity;
-            stock.totalCost += (purchasePrice * quantity);
+            stock.totalCost += purchasePrice * quantity;
             stock.avgCost = stock.totalCost / newTotalQuantity;
             stock.quantity = newTotalQuantity;
 

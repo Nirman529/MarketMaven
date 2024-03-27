@@ -234,9 +234,10 @@ export const getPortfolioData = async () => {
         return [];
     }
 }
-export const addToPortfolio = async (ticker, name, quantity, avgCost) => {
-    const apiUrl = `${apiLink}/portfolio/add`;
-    const totalCost = quantity * avgCost;
+
+export const addToPortfolio = async (ticker, name, quantity, purchasePrice) => {
+    const apiUrl = `${apiLink}/portfolio/update/buy/${ticker}`;
+    const totalCost = quantity * purchasePrice;
 
     try {
         const response = await fetch(apiUrl, {
@@ -244,9 +245,8 @@ export const addToPortfolio = async (ticker, name, quantity, avgCost) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ticker, name, quantity, avgCost, totalCost }),
+            body: JSON.stringify({ ticker, name, quantity, purchasePrice, totalCost }),
         });
-
         if (!response.ok) {
             const errorData = await response.json(); // assuming your server responds with JSON-formatted error details
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
@@ -319,15 +319,14 @@ export const depositToWallet = async (amount) => {
             },
             body: JSON.stringify({ amount }),
         });
-
+        const data = await response.json(); // Always parse the JSON first
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return { ...data, error: `HTTP error! status: ${response.status}` };
         }
-
-        const data = await response.json();
         return data;
     } catch (error) {
         console.error('Error depositing to wallet:', error);
+        return { error: error.toString() }; // Return error information in a consistent format
     }
 };
 
@@ -341,13 +340,15 @@ export const withdrawFromWallet = async (amount) => {
             body: JSON.stringify({ amount }),
         });
 
+        const data = await response.json(); // Always parse the JSON first
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Attach the error message to the response data if the response is not ok
+            return { ...data, error: `HTTP error! status: ${response.status}` };
         }
 
-        const data = await response.json();
         return data;
     } catch (error) {
         console.error('Error withdrawing from wallet:', error);
+        return { error: error.toString() }; // Return error information in a consistent format
     }
 };

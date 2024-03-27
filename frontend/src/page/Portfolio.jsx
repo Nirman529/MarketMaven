@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Row, Col, Modal, Form } from 'react-bootstrap';
-import { getWalletBalance, getPortfolioData, getCompanyLatestPriceOfStock } from '../api/api.js';
+import { getWalletBalance, getPortfolioData, getCompanyLatestPriceOfStock, depositToWallet, withdrawFromWallet, removeFromPortfolio, addToPortfolio } from '../api/api.js';
 
 const Portfolio = () => {
 	const [portfolioData, setPortfolioData] = useState([]);
@@ -41,12 +41,55 @@ const Portfolio = () => {
 		console.log('portfolioData', portfolioData)
 	}, []);
 
-	const handleBuy = () => {
 
-	}
-	const handleSell = () => {
+	const handleBuy = async () => {
+		if (!quantity || quantity <= 0 || !selectedStock) {
+			console.log("Invalid quantity or stock information missing");
+			return;
+		}
 
-	}
+		const purchasePrice = Number(selectedStock?.c);
+		const totalCost = purchasePrice * quantity;
+
+		try {
+			const withdrawResponse = await withdrawFromWallet(totalCost);
+			if (!withdrawResponse || withdrawResponse.error) {
+				throw new Error('Could not withdraw from wallet');
+			}
+			const ticker = selectedStock?.ticker;
+			const name = selectedStock?.name;
+			await addToPortfolio(ticker, name, quantity, purchasePrice);
+			console.log("Stock purchased and added to portfolio");
+		} catch (error) {
+			console.error("Transaction failed:", error);
+		}
+		setQuantity(0);
+		setBuyModal(!buyModal);
+	};
+
+	const handleSell = async () => {
+		if (!quantity || quantity <= 0 || !selectedStock) {
+			console.log("Invalid quantity or stock information missing");
+			return;
+		}
+
+		const sellPrice = Number(selectedStock?.c);
+		const totalProceeds = sellPrice * quantity;
+		try {
+			const depositResponse = await depositToWallet(totalProceeds);
+			console.log('depositResponse', depositResponse)
+			if (depositResponse.error) {
+				throw new Error('Could not deposit into wallet');
+			}
+			const ticker = selectedStock?.ticker;
+			await removeFromPortfolio(ticker, quantity, sellPrice);
+			console.log("Stock sold and portfolio updated");
+		} catch (error) {
+			console.error("Transaction failed:", error);
+		}
+		setQuantity(0);
+		setSellModal(!sellModal);
+	};
 
 	const buyStock = (stock) => {
 		setSelectedStock(stock);
@@ -111,7 +154,7 @@ const Portfolio = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(selectedStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: {balance}</div>
+					<div className='m-0'>Money in Wallet: ${balance}</div>
 					<Form.Group as={Row} className="m-0 my-1 align-items-center">
 						Quantity:
 						<Col>
@@ -144,7 +187,7 @@ const Portfolio = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(selectedStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: {balance}</div>
+					<div className='m-0'>Money in Wallet: ${balance}</div>
 					<Form.Group as={Row} className="m-0 my-1 align-items-center">
 						Quantity:
 						<Col>

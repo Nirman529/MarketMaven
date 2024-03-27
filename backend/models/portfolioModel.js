@@ -15,10 +15,12 @@ const portfolioSchema = mongoose.Schema(
             required: true
         },
         avgCost: {
-            type: Number
+            type: Number,
+            required: true
         },
         totalCost: {
-            type: Number
+            type: Number,
+            required: true
         },
     },
     {

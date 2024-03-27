@@ -1,6 +1,6 @@
 import express from 'express';
 import axios from 'axios';
-import { POLY_KEY, FIN_KEY } from '../config.js';
+import { POLY_KEY, FIN_KEY, _POLY_KEY } from '../config.js';
 
 const router = express.Router();
 
@@ -40,7 +40,7 @@ router.get('/polygon_data', async (request, response) => {
     const from = updateDate(currentDate);
 
     try {
-        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/hour/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
+        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/hour/${from}/${to}?adjusted=true&sort=asc&apiKey=${_POLY_KEY}`);
         response.json({
             success: true,
             data: aresponse.data,
@@ -117,10 +117,11 @@ router.get('/news', async (request, response) => {
 
     try {
         const aresponse = await axios.get(`https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${FIN_KEY}`);
+        const filteredNews = aresponse.data.filter(item => item.image && item.headline);
 
         response.json({
             success: true,
-            data: aresponse.data,
+            data: filteredNews,
             message: "data fetched successfully"
         });
     } catch (error) {
@@ -216,30 +217,57 @@ router.get('/company_earnings', async (request, response) => {
 });
 
 router.get('/historical_data', async (request, response) => {
+    // const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
     const symbol = request.query.symbol.toUpperCase();
 
-    const currentDate = new Date();
-    const to = currentDate.toISOString().split('T')[0];
-
-    currentDate.setMonth(currentDate.getMonth() - 6);
-    currentDate.setDate(currentDate.getDate() - 1);
-    const from = currentDate.toISOString().split('T')[0];
-
     try {
-        const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
-        response.json({
-            success: true,
-            data: aresponse.data,
-            message: "polygon data fetched successfully"
-        });
+        const today = new Date().toISOString().split('T')[0];
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        const fromDate = twoYearsAgo.toISOString().split('T')[0];
+
+        const res = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${fromDate}/${today}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
+        const chartData = await res.data.results.map(result => ({
+            timestamp: result.t,
+            open: result.o,
+            high: result.h,
+            low: result.l,
+            close: result.c,
+            volume: result.v
+        }));
+
+        response.json(chartData);
     } catch (error) {
-        console.error(error);
-        response.status(500).json({
-            success: false,
-            message: "Error fetching data from polygon.io",
-            error: error.message
-        });
+        console.error('Error fetching chart data:', error);
+        response.status(500).json({ error: 'Internal server error' });
     }
+    // const currentDate = new Date();
+    // const to = currentDate.toISOString().split('T')[0];
+
+    // currentDate.setFullYear(currentDate.getFullYear() - 2);
+    // // currentDate.setDate(currentDate.getDate() - 1);
+    // const from = currentDate.toISOString().split('T')[0];
+
+    // try {
+    //     const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
+    //     const chartData = aresponse.data.results.map(result => ({
+    //         timestamp: result.t,
+    //         open: result.o,
+    //         high: result.h,
+    //         low: result.l,
+    //         close: result.c,
+    //         volume: result.v
+    //     }));
+    //     response.json(chartData);
+
+    // } catch (error) {
+    //     console.error(error);
+    //     response.status(500).json({
+    //         success: false,
+    //         message: "Error fetching data from polygon.io",
+    //         error: error.message
+    //     });
+    // }
 });
 
 export default router;

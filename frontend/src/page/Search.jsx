@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance } from "../api/api.js";
+import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance, depositToWallet, withdrawFromWallet } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -9,6 +9,8 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
+import MainCharts from './MainCharts.jsx';
+
 // import { useSearch } from '../SearchContext.js';
 
 const Search = () => {
@@ -54,12 +56,12 @@ const Search = () => {
 	const twitterShareUrl = `${twitterBaseUrl}?text=${tweetText}&url=${tweetUrl}`;
 	let { ticker } = useParams();
 	const navigate = useNavigate();
-
+	const groupingUnits = [['week', [1]], ['month', [1, 2, 3, 4, 6]]];
 	const getMarketStatus = (timestamp) => {
 		const currentTime = new Date();
-		const marketTimestamp = new Date(timestamp);
+		const marketTimestamp = new Date(timestamp * 1000);
 		const differenceInSeconds = (currentTime - marketTimestamp) / 1000;
-
+		console.log('differenceInSeconds', differenceInSeconds)
 		return (
 			<>
 				{
@@ -70,6 +72,21 @@ const Search = () => {
 			</>
 		);
 	}
+
+	useEffect(() => {
+		const fetchLatestPrice = async () => {
+			try {
+				const latestPriceData = await getCompanyLatestPriceOfStock(ticker);
+				setCompanyLatestPriceOfStock(latestPriceData.data);
+			} catch (error) {
+				console.error('Error fetching latest stock price:', error);
+			}
+		};
+		fetchLatestPrice();
+		getMarketStatus(companyLatestPriceOfStock?.t);
+		const intervalId = setInterval(fetchLatestPrice, 15000);
+		return () => clearInterval(intervalId);
+	}, [ticker]);
 
 	useEffect(() => {
 		performSearchWithSymbol(ticker);
@@ -101,7 +118,6 @@ const Search = () => {
 				getCompanyInsiderInformation(symbol),
 				getHourlyData(symbol),
 				getRecommendationData(symbol),
-				getHistoricalData(symbol),
 				getEarningsData(symbol),
 				getWalletBalance()
 			];
@@ -115,23 +131,19 @@ const Search = () => {
 				_companyInsiderInformation,
 				_hourlyData,
 				_recommendationData,
-				_historicalData,
 				_earningsData,
 				_walletBalance
 			] = await Promise.all(dataFetchPromises);
-
-			// Validate news items
-			const validNews = _news?.data.filter(isValid);
 
 			// Set the state for each piece of data
 			setStockInfo(_stockInfo?.data);
 			setCompanyLatestPriceOfStock(_companyLatestPriceOfStock.data);
 			setCompanyPeers(_companyPeers?.data);
-			setNews(validNews);
+			setNews(_news?.data);
 			setCompanyInsiderInformation(_companyInsiderInformation?.data.data);
 			setHourlyData(convertData(_hourlyData?.data.results));
 			setRecommendationData(_recommendationData?.data);
-			setHistoricalData(_historicalData?.data.results);
+			// setHistoricalData(_historicalData?.data.results);
 			setEarningsData(processedHistoricalData(_earningsData?.data));
 			const isPriceUp = _companyLatestPriceOfStock.data?.d > 0;
 			setPriceColor(isPriceUp ? 'green' : 'red');
@@ -141,7 +153,6 @@ const Search = () => {
 			// Additional checks for watchlist and portfolio
 			checkIfInWatchlist(symbol);
 			checkIfInPortfolio(symbol);
-			console.log('balance', balance)
 		} catch (error) {
 			console.error('Error fetching stock info:', error);
 		}
@@ -333,91 +344,6 @@ const Search = () => {
 		return [item.t, item.c]
 	});
 
-	const historicalChartOptions = {
-		rangeSelector: {
-			selected: 1
-		},
-
-		title: {
-			text: `${ticker} Historical`
-		},
-
-		subtitle: {
-			text: 'With SMA and Volume by Price technical indicators'
-		},
-
-		yAxis: [{
-			startOnTick: true,
-			endOnTick: true,
-			labels: {
-				align: 'right',
-				x: -3
-			},
-			title: {
-				text: 'OHLC'
-			},
-			height: '60%',
-			lineWidth: 2,
-			resize: {
-				enabled: true
-			}
-		}, {
-			labels: {
-				align: 'right',
-				x: -3
-			},
-			title: {
-				text: 'Volume'
-			},
-			top: '65%',
-			height: '35%',
-			offset: 0,
-			lineWidth: 2
-		}],
-		tooltip: {
-			split: true
-		},
-		plotOptions: {
-			series: {
-				dataGrouping: {
-					// units: date
-				}
-			}
-		},
-		series: [{
-			type: 'candlestick',
-			name: ticker,
-			id: ticker,
-			zIndex: 2,
-			data: stock_price
-		}, {
-			type: 'column',
-			name: 'Volume',
-			id: 'volume',
-			data: volume,
-			yAxis: 1
-		}, {
-			type: 'vbp',
-			linkedTo: ticker,
-			params: {
-				volumeSeriesID: 'volume'
-			},
-			dataLabels: {
-				enabled: false
-			},
-			zoneLines: {
-				enabled: false
-			}
-		}, {
-			type: 'sma',
-			linkedTo: ticker,
-			zIndex: 1,
-			marker: {
-				enabled: false
-			}
-		}]
-	}
-
 	const hourlyPriceOptions = {
 		chart: {
 			type: 'line',
@@ -550,9 +476,38 @@ const Search = () => {
 				day: '%Y-%m-%d'
 			},
 			labels: {
+				// formatter: function () {
+				// 	// Use 'pos' as an index if it corresponds with your sorted data array
+				// 	const index = this.pos;
+
+				// 	// Make sure index is within the bounds of the earningsData array
+				// 	if (index < 0 || index >= earningsData.length) {
+				// 		return ''; // Return an empty string or some default HTML as fallback
+				// 	}
+
+				// 	const surprise = earningsData[index].surprisePercent.toFixed(2); // Assuming surprisePercent is a number
+				// 	const periodLabel = `<div style="text-align: center;">${Highcharts.dateFormat('%Y-%m-%d', earningsData[index].period)}</div>`;
+				// 	const surpriseLabel = `<div style="text-align: center;">Surprise: ${surprise}%</div>`;
+
+				// 	return periodLabel + surpriseLabel;
+				// },
+
+
+
+				// formatter: function () {
+				//     const index = this.pos;
+				//     const surprise = earningsData[index].surprisePercent;
+				//     const periodLabel = <div style="text-align: center;">${this.value}</div>;
+				//     const surpriseLabel = <div style="text-align: center;">Surprise: ${surprise}%</div>;
+				//     return ${periodLabel}${surpriseLabel};
+				// },
+
+
 				formatter: function () {
 					const point = earningsData.find(p => new Date(p.period).getTime() === this.value);
-					return `<span>${Highcharts.dateFormat('%Y-%m-%d', this.value)}</span><br/><span>${point ? point.surprise.toFixed(2) : ''}</span>`;
+					// const surprise = earningsData.find(p => p.surprise)
+
+					return `<span>${Highcharts.dateFormat('%Y-%m-%d', this.value)}</span><br/><span>${!point ? point?.surprise.toFixed(2) : ''}</span>`;
 				},
 				useHTML: true,
 				style: {
@@ -610,9 +565,7 @@ const Search = () => {
 	const handleQuantityChange = (e) => {
 		const qty = Number(e.target.value);
 		setQuantity(qty);
-
-		const buyTotals = qty * roundNumber(companyLatestPriceOfStock?.c);
-		setBuyTotals(qty * companyLatestPriceOfStock?.c);
+		setBuyTotals(roundNumber(qty * companyLatestPriceOfStock?.c));
 	};
 
 	const handleBuy = async () => {
@@ -620,16 +573,24 @@ const Search = () => {
 			console.log("Invalid quantity or stock information missing");
 			return;
 		}
-		const purchasePrice = companyLatestPriceOfStock?.c; // Current price
-		const ticker = stockInfo?.ticker; // Stock ticker symbol
-		const name = stockInfo?.name; // Stock name
+
+		const purchasePrice = Number(companyLatestPriceOfStock?.c);
+		const totalCost = purchasePrice * quantity;
+
 		try {
+			const withdrawResponse = await withdrawFromWallet(totalCost);
+			if (!withdrawResponse || withdrawResponse.error) {
+				throw new Error('Could not withdraw from wallet');
+			}
+			const ticker = stockInfo?.ticker;
+			const name = stockInfo?.name;
 			await addToPortfolio(ticker, name, quantity, purchasePrice);
 			console.log("Stock purchased and added to portfolio");
-			// Optional: Update UI or state to reflect the change
 		} catch (error) {
-			console.error("Failed to buy stock:", error);
+			console.error("Transaction failed:", error);
 		}
+		setQuantity(0);
+		setBuyModal(!buyModal);
 	};
 
 	const handleSell = async () => {
@@ -637,14 +598,22 @@ const Search = () => {
 			console.log("Invalid quantity or stock information missing");
 			return;
 		}
-		const sellPrice = companyLatestPriceOfStock?.c; // Current price for selling
-		const ticker = stockInfo?.ticker; // Stock ticker symbol
+
+		const sellPrice = Number(companyLatestPriceOfStock?.c);
+		const totalProceeds = sellPrice * quantity;
 		try {
+			const depositResponse = await depositToWallet(totalProceeds);
+			if (depositResponse.error) {
+				throw new Error('Could not deposit into wallet');
+			}
+			const ticker = stockInfo?.ticker;
 			await removeFromPortfolio(ticker, quantity, sellPrice);
 			console.log("Stock sold and portfolio updated");
 		} catch (error) {
-			console.error("Failed to sell stock:", error);
+			console.error("Transaction failed:", error);
 		}
+		setQuantity(0);
+		setSellModal(!sellModal);
 	};
 	const checkIfInWatchlist = async (tick) => {
 		try {
@@ -697,7 +666,7 @@ const Search = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: {balance}</div>
+					<div className='m-0'>Money in Wallet: ${balance}</div>
 
 					<Form.Group as={Row} className='m-0 my-1 align-items-center' controlId="formQuantity">
 						Quantity:
@@ -729,7 +698,7 @@ const Search = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: {balance}</div>
+					<div className='m-0'>Money in Wallet: ${balance}</div>
 					<Form.Group as={Row} className="m-0 my-1 align-items-center">
 						Quantity:
 						<Col>
@@ -906,8 +875,7 @@ const Search = () => {
 									</Tab>
 									<Tab eventKey="charts" title="Charts" transition={false}>
 										<Col className="recommendation-trends">
-											<h3>Charts baki che!!!</h3>
-											{/* <HighchartsReact highcharts={Highcharts} options={historicalChartOptions} /> */}
+											<MainCharts />
 										</Col>
 									</Tab>
 									<Tab eventKey="insights" title="Insights" transition={false}>
@@ -943,6 +911,7 @@ const Search = () => {
 												<HighchartsReact highcharts={Highcharts} options={recommendationTrendsOptions} />
 											</Col>
 											<Col className="eps-surprises">
+												{console.log('companyEarnings', earningsData)}
 												<HighchartsReact highcharts={Highcharts} options={historicalEPSSurprisesOptions} />
 											</Col>
 										</Row>
