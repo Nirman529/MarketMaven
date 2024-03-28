@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance, depositToWallet, withdrawFromWallet } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
-import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
+import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import Highcharts from 'highcharts';
@@ -15,6 +15,8 @@ import MainCharts from './MainCharts.jsx';
 
 const Search = () => {
 	// const { searchData, setSearchData } = useSearch();
+	let { ticker } = useParams();
+	const navigate = useNavigate();
 	let [inputValue, setInputValue] = useState("");
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
@@ -36,7 +38,9 @@ const Search = () => {
 	let [portfolioData, setPortfolioData] = useState({});
 	let [quantity, setQuantity] = useState(0);
 	let [buyTotals, setBuyTotals] = useState(0);
-	const [searchTrigger, setSearchTrigger] = useState("");
+	let [mainLoading, setMainLoading] = useState("");
+	const [showErrorAlert, setShowErrorAlert] = useState(false);
+	const [errorAlertMessage, setErrorAlertMessage] = useState('');
 	let [totals, setTotals] = useState({
 		totalMspr: 0,
 		positiveMspr: 0,
@@ -54,14 +58,11 @@ const Search = () => {
 	const tweetText = encodeURIComponent(selectedNews?.headline);
 	const tweetUrl = encodeURIComponent(selectedNews?.url);
 	const twitterShareUrl = `${twitterBaseUrl}?text=${tweetText}&url=${tweetUrl}`;
-	let { ticker } = useParams();
-	const navigate = useNavigate();
 	const groupingUnits = [['week', [1]], ['month', [1, 2, 3, 4, 6]]];
 	const getMarketStatus = (timestamp) => {
 		const currentTime = new Date();
 		const marketTimestamp = new Date(timestamp * 1000);
 		const differenceInSeconds = (currentTime - marketTimestamp) / 1000;
-		console.log('differenceInSeconds', differenceInSeconds)
 		return (
 			<>
 				{
@@ -73,40 +74,12 @@ const Search = () => {
 		);
 	}
 
-	useEffect(() => {
-		const fetchLatestPrice = async () => {
-			try {
-				const latestPriceData = await getCompanyLatestPriceOfStock(ticker);
-				setCompanyLatestPriceOfStock(latestPriceData.data);
-			} catch (error) {
-				console.error('Error fetching latest stock price:', error);
-			}
-		};
-		fetchLatestPrice();
-		getMarketStatus(companyLatestPriceOfStock?.t);
-		const intervalId = setInterval(fetchLatestPrice, 15000);
-		return () => clearInterval(intervalId);
-	}, [ticker]);
-
-	useEffect(() => {
-		performSearchWithSymbol(ticker);
-	}, [ticker]);
-
-	const checkIfInPortfolio = async (ticker) => {
-		try {
-			const portfolioData = await getPortfolioData();
-			const stockInPortfolio = portfolioData.data.some(stock => stock.ticker === ticker.toUpperCase());
-			setIsStockInPortfolio(stockInPortfolio);
-		} catch (error) {
-			console.error("Error checking portfolio:", error);
-		}
-	};
-
-	const performSearchWithSymbol = async (symbol) => {
+	const performSearchWithSymbol = useCallback(async (symbol) => {
 		if (!symbol) {
 			console.log("Please enter a ticker symbol to search.");
 			return;
 		}
+		setMainLoading(true);
 
 		try {
 			// Construct an array of promises for the various data fetches
@@ -153,10 +126,60 @@ const Search = () => {
 			// Additional checks for watchlist and portfolio
 			checkIfInWatchlist(symbol);
 			checkIfInPortfolio(symbol);
+			if (!_stockInfo?.data) {
+				setShowErrorAlert(true);
+				setErrorAlertMessage('No data found. Please enter a valid Ticker');
+			} else {
+				setShowErrorAlert(false);
+			}
 		} catch (error) {
+			setShowErrorAlert(true);
 			console.error('Error fetching stock info:', error);
+		} finally {
+			setMainLoading(false);
+		}
+	}, []);
+
+
+	useEffect(() => {
+		const fetchLatestPrice = async () => {
+			try {
+				const latestPriceData = await getCompanyLatestPriceOfStock(ticker);
+				setCompanyLatestPriceOfStock(latestPriceData.data);
+			} catch (error) {
+				console.error('Error fetching latest stock price:', error);
+			}
+		};
+		fetchLatestPrice();
+		getMarketStatus(companyLatestPriceOfStock?.t);
+		const intervalId = setInterval(fetchLatestPrice, 15000);
+		return () => clearInterval(intervalId);
+	}, [ticker]);
+
+	useEffect(() => {
+		if (ticker) {
+			performSearchWithSymbol(ticker);
+		}
+	}, [ticker, performSearchWithSymbol]);
+
+	// useEffect(() => {
+	// 	if (ticker) {
+	// 		performSearchWithSymbol(ticker);
+	// 	} else {
+	// 		navigate("../");
+	// 	}
+	// }, [ticker, navigate]);
+
+	const checkIfInPortfolio = async (ticker) => {
+		try {
+			const portfolioData = await getPortfolioData();
+			const stockInPortfolio = portfolioData.data.some(stock => stock.ticker === ticker.toUpperCase());
+			setIsStockInPortfolio(stockInPortfolio);
+		} catch (error) {
+			console.error("Error checking portfolio:", error);
 		}
 	};
+
 
 	const processedHistoricalData = (data) => {
 		return data.map(item => {
@@ -186,6 +209,7 @@ const Search = () => {
 			console.log("Input value is empty.");
 			return;
 		} else {
+
 			navigate(`/search/${inputValue}`)
 		}
 	}
@@ -265,7 +289,7 @@ const Search = () => {
 	}, [inputValue]);
 
 	useEffect(() => {
-		if (stockInfo) {
+		if (stockInfo && inputValue) {
 			navigate(`/search/${inputValue}`);
 		}
 	}, [stockInfo, inputValue, navigate]);
@@ -585,7 +609,6 @@ const Search = () => {
 			const ticker = stockInfo?.ticker;
 			const name = stockInfo?.name;
 			await addToPortfolio(ticker, name, quantity, purchasePrice);
-			console.log("Stock purchased and added to portfolio");
 		} catch (error) {
 			console.error("Transaction failed:", error);
 		}
@@ -608,7 +631,6 @@ const Search = () => {
 			}
 			const ticker = stockInfo?.ticker;
 			await removeFromPortfolio(ticker, quantity, sellPrice);
-			console.log("Stock sold and portfolio updated");
 		} catch (error) {
 			console.error("Transaction failed:", error);
 		}
@@ -617,10 +639,8 @@ const Search = () => {
 	};
 	const checkIfInWatchlist = async (tick) => {
 		try {
-			console.log('tick', tick)
 			const watchlistData = await getWatchlistData();
 			const stockInWatchlist = watchlistData.data.some(stock => stock.ticker === tick);
-			console.log('stockInWatchlist', stockInWatchlist)
 			setIsInWatchlist(stockInWatchlist);
 		} catch (error) {
 			console.error("Error checking watchlist:", error);
@@ -783,6 +803,11 @@ const Search = () => {
 					<button onClick={performSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
 					<button onClick={() => clearPage()} className='me-3'><i className="bi bi-x" style={{ fontSize: '2rem' }}></i></button>
 				</form>
+				{showErrorAlert && (
+					<Alert variant="danger" onClose={() => setShowErrorAlert(false)} dismissible>
+						{errorAlertMessage}
+					</Alert>
+				)}
 				{
 					stockInfo ?
 						<>
@@ -856,20 +881,18 @@ const Search = () => {
 									<Tab eventKey="news" title="Top News" transition={false} key="news">
 										<Row>
 											{news?.slice(0, 20).map((item, key) => {
-												return <div key={key}>
-													<Col md={6} className="mb-4 hover-effect">
-														<Card onClick={() => handleShow(item)}>
-															<Row className=''>
-																<img src={item.image} className="news-image m-3" alt="" />
-																<Col className='d-flex justify-content-center align-items-center text-center'>
-																	<Card.Body>
-																		<Card.Title>{item.headline}</Card.Title>
-																	</Card.Body>
-																</Col>
-															</Row>
-														</Card>
-													</Col>
-												</div>
+												return <Col md={6} className="mb-4 hover-effect" key={key}>
+													<Card onClick={() => handleShow(item)}>
+														<Row className=''>
+															<img src={item.image} className="news-image m-3" alt="" />
+															<Col className='d-flex justify-content-center align-items-center text-center'>
+																<Card.Body>
+																	<Card.Title>{item.headline}</Card.Title>
+																</Card.Body>
+															</Col>
+														</Row>
+													</Card>
+												</Col>
 											})}
 										</Row>
 									</Tab>
@@ -911,7 +934,6 @@ const Search = () => {
 												<HighchartsReact highcharts={Highcharts} options={recommendationTrendsOptions} />
 											</Col>
 											<Col className="eps-surprises">
-												{console.log('companyEarnings', earningsData)}
 												<HighchartsReact highcharts={Highcharts} options={historicalEPSSurprisesOptions} />
 											</Col>
 										</Row>
@@ -955,12 +977,7 @@ const Search = () => {
 							</Modal>
 						</>
 						:
-						ticker ?
-							<div className="error-message">
-								No data found. Please enter a valid Ticker
-							</div>
-							:
-							<></>
+						<></>
 				}
 			</div>
 		</>

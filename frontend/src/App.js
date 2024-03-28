@@ -18,13 +18,15 @@ const App = () => {
   return (
     <BrowserRouter>
       <Header />
-      <Routes>
-        <Route path='/' element={<Navigate replace to="/search/home" />} />
-        <Route path='/search/home' element={<Search />} />
-        <Route path='/search/:ticker' element={<Search />} />
-        <Route path='/watchlist' element={<Watchlist />} />
-        <Route path='/portfolio' element={<Portfolio />} />
-      </Routes>
+      <div className='centered-content'>
+        <Routes>
+          <Route path='/' element={<Navigate replace to="/search/home" />} />
+          <Route path='/search/home' element={<Search />} />
+          <Route path='/search/:ticker' element={<Search />} />
+          <Route path='/watchlist' element={<Watchlist />} />
+          <Route path='/portfolio' element={<Portfolio />} />
+        </Routes>
+      </div>
       <Footer />
     </BrowserRouter>
   );
