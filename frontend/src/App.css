@@ -45,10 +45,22 @@
 	width: 75%;
 }
 
+.remove-watchlist {
+	margin-right: auto;
+	padding: 0.25rem 0.75rem;
+	line-height: 1;
+}
+
+.no-background-border {
+	display: flex;
+	background-color: transparent;
+	border-bottom: none;
+	padding: 0.75rem 1.25rem;
+}
+
 .centered-content {
 	display: flex;
 	justify-content: center;
-	align-items: center;
 	min-height: calc(100vh - 110px);
 }
 
@@ -166,7 +178,7 @@
 	color: white;
 }
 
-.nav-link:hover{
+.nav-link:hover {
 	color: #cfcfcf;
 	text-decoration: none;
 }

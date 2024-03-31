@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance, depositToWallet, withdrawFromWallet } from "../api/api.js";
+import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getEarningsData, getWalletBalance, depositToWallet, withdrawFromWallet } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -798,7 +798,7 @@ const Search = () => {
 						{showSuggestions && suggestions?.length > 0 ? (
 							<ul className="suggestions-list ms-3 m-0 p-0">
 								{suggestions?.slice(0, 5).map((suggestion, index) => (
-									<li className='' key={index} onClick={(suggestion) => handleSuggestionClick(suggestion.symbol)}>
+									<li className='' key={index} onClick={() => handleSuggestionClick(suggestion.symbol)}>
 										{suggestion.symbol} | {suggestion.description}
 									</li>
 								))}
@@ -826,11 +826,6 @@ const Search = () => {
 					<button onClick={performSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
 					<button onClick={() => clearPage()} className='me-3'><i className="bi bi-x" style={{ fontSize: '2rem' }}></i></button>
 				</form>
-				{showErrorAlert && (
-					<Alert variant="danger" onClose={() => setShowErrorAlert(false)} dismissible>
-						{errorAlertMessage}
-					</Alert>
-				)}
 				{
 					stockInfo ?
 						<>

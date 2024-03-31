@@ -105,9 +105,16 @@ const Portfolio = () => {
 					{portfolioData && portfolioData.length > 0 ? (
 						portfolioData.map((stock, key) => (
 							<Card key={key} className="mb-3">
+								<Card.Header className='text-start'>
+									<span style={{fontWeight: 'bold', fontSize:'30px'}}>
+										{stock.ticker}{" "}
+									</span>
+									<span>
+										{stock.name}
+									</span>
+								</Card.Header>
 								<Card.Body className='p-0 text-start'>
-									<Card.Title className='m-3 bg-light'>{stock.ticker} - {stock.name}</Card.Title>
-									<Row>
+									<Row className='m-2 p-0'>
 										<Col sm={3}>
 											<Card.Text className='m-0 mx-3'>Quantity: </Card.Text>
 											<Card.Text className='m-0 mx-3'>Avg. Cost / Share: </Card.Text>
