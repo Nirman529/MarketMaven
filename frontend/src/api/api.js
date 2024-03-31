@@ -2,15 +2,6 @@ import axios from "axios";
 import apiLink from "../apiLink";
 
 export const getStockInfo = async (ticker) => {
-    // return async (dispatch) => {
-    //     await axios
-    //         .get(`${apiLink}/api/company_description?symbol=${ticker}`)
-    //         .then((response) => {
-
-    //         }).catch((error) => {
-    //         console.log('error in fetchStockInfo', error)
-    //     })
-    // }
     try {
         const response = await fetch(`${apiLink}/api/company_description?symbol=${ticker}`);
         if (!response.ok) {
@@ -168,7 +159,6 @@ export const getWatchlistData = async () => {
 
 export const addToWatchlist = async (ticker, name) => {
     const apiUrl = `${apiLink}/watchlist/add`;
-
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -191,12 +181,10 @@ export const addToWatchlist = async (ticker, name) => {
 
 export const removeFromWatchlist = async (ticker) => {
     const apiUrl = `${apiLink}/watchlist/remove/${ticker}`;
-
     try {
         const response = await fetch(apiUrl, {
             method: 'DELETE',
             headers: {
-                // Add any headers like Authorization if your API requires it
             },
         });
 
@@ -213,7 +201,6 @@ export const removeFromWatchlist = async (ticker) => {
 };
 
 // ------------------------- portfolio apis
-
 export const getPortfolioData = async () => {
     try {
         const response = await fetch(`${apiLink}/portfolio/get`, {
@@ -238,7 +225,6 @@ export const getPortfolioData = async () => {
 export const addToPortfolio = async (ticker, name, quantity, purchasePrice) => {
     const apiUrl = `${apiLink}/portfolio/update/buy/${ticker}`;
     const totalCost = quantity * purchasePrice;
-
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -248,23 +234,21 @@ export const addToPortfolio = async (ticker, name, quantity, purchasePrice) => {
             body: JSON.stringify({ ticker, name, quantity, purchasePrice, totalCost }),
         });
         if (!response.ok) {
-            const errorData = await response.json(); // assuming your server responds with JSON-formatted error details
+            const errorData = await response.json();
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
         }
 
         const data = await response.json();
         console.log('Stock added to portfolio:', data);
-        return data; // Return the data for further processing if necessary
+        return data;
     } catch (error) {
         console.error('Failed to add to portfolio:', error);
-        throw error; // Re-throw the error to handle it in the calling function
+        throw error;
     }
 };
 
 export const removeFromPortfolio = async (ticker, quantity, sellPrice) => {
     const apiUrl = `${apiLink}/portfolio/update/sell/${ticker}`;
-    // Assume you sell some amount of stock at a given price and need to update the portfolio
-
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -275,21 +259,20 @@ export const removeFromPortfolio = async (ticker, quantity, sellPrice) => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json(); // assuming your server responds with JSON-formatted error details
+            const errorData = await response.json();
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
         }
 
         const data = await response.json();
         console.log('Updated portfolio after selling stock:', data);
-        return data; // Return the data for further processing if necessary
+        return data;
     } catch (error) {
         console.error('Failed to update portfolio after selling:', error);
-        throw error; // Re-throw the error to handle it in the calling function
+        throw error;
     }
 };
 
 // ----------------------- wallet
-
 export const getWalletBalance = async () => {
     try {
         const response = await fetch(`${apiLink}/wallet/get`, {
@@ -319,14 +302,14 @@ export const depositToWallet = async (amount) => {
             },
             body: JSON.stringify({ amount }),
         });
-        const data = await response.json(); // Always parse the JSON first
+        const data = await response.json();
         if (!response.ok) {
             return { ...data, error: `HTTP error! status: ${response.status}` };
         }
         return data;
     } catch (error) {
         console.error('Error depositing to wallet:', error);
-        return { error: error.toString() }; // Return error information in a consistent format
+        return { error: error.toString() };
     }
 };
 
@@ -340,15 +323,14 @@ export const withdrawFromWallet = async (amount) => {
             body: JSON.stringify({ amount }),
         });
 
-        const data = await response.json(); // Always parse the JSON first
+        const data = await response.json();
         if (!response.ok) {
-            // Attach the error message to the response data if the response is not ok
             return { ...data, error: `HTTP error! status: ${response.status}` };
         }
 
         return data;
     } catch (error) {
         console.error('Error withdrawing from wallet:', error);
-        return { error: error.toString() }; // Return error information in a consistent format
+        return { error: error.toString() };
     }
 };

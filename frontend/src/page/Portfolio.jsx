@@ -32,7 +32,6 @@ const Portfolio = () => {
 				setShowAlert(portfolioResponse.data.length === 0);
 			} catch (error) {
 				console.error("Error fetching portfolio data:", error);
-				// Handle the error state as needed
 			} finally {
 				setIsLoading(false);
 			}

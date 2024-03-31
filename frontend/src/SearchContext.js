@@ -41,8 +41,6 @@ export const SearchProvider = ({ children }) => {
         sellModal: false,
     });
 
-    // Functions to manipulate the state can be added here if necessary
-
     return (
         <SearchContext.Provider value={{ searchData, setSearchData }}>
             {children}

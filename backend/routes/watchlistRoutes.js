@@ -1,5 +1,5 @@
-import express from 'express';
-import { Watchlist } from '../models/stockModel.js';
+const express = require('express');
+const { Watchlist } = require('../models/stockModel.js');
 const router = express.Router();
 
 router.post('/add', async (request, response) => {
@@ -23,7 +23,6 @@ router.post('/add', async (request, response) => {
         return response.status(500).send({ message: error.message });
     }
 });
-
 
 // get all the stocks
 router.get('/get', async (request, response) => {
@@ -55,7 +54,6 @@ router.get('/:id', async (request, response) => {
     }
 });
 
-
 // delete stock
 router.delete('/remove/:ticker', async (request, response) => {
     const { ticker } = request.params;
@@ -73,4 +71,4 @@ router.delete('/remove/:ticker', async (request, response) => {
     }
 });
 
-export default router;
+module.exports = router;

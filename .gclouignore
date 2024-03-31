@@ -1,0 +1,8 @@
+.gitignore
+.gcloudignore
+/env
+/node_modules
+.git
+/setup.cfg
+.DS_Store
+README.md

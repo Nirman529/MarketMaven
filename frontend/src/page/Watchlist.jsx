@@ -30,9 +30,7 @@ const Watchlist = () => {
 		fetchWatchlistAndStockInfo();
 	}, []);
 
-	const handleRemoveFromWatchlist = async (ticker, e) => {
-		e.stopPropagating();
-
+	const handleRemoveFromWatchlist = async (ticker) => {
 		try {
 			await removeFromWatchlist(ticker);
 			setStockInfo(currentStockInfo => currentStockInfo.filter(item => item.ticker !== ticker));
@@ -46,9 +44,9 @@ const Watchlist = () => {
 			<Col>
 				<h2 className='m-3 text-start mb-3 mt-3'>My Watchlist</h2>
 				{stockInfo?.map((item, key) => (
-					<Card className="mb-3" key={key} onClick={() => navigate(`/search/${item.ticker}`)} style={{ cursor: 'pointer' }}>
-						<Card.Body>
-							<Button className='clear-background d-flex justify-content-start' onClick={(e) => handleRemoveFromWatchlist(item?.ticker, e)}>x</Button>
+					<Card className="mb-3" key={key} style={{ cursor: 'pointer' }}>
+						<Button className='clear-background d-flex justify-content-start' onClick={() => handleRemoveFromWatchlist(item?.ticker)}>x</Button>
+						<Card.Body onClick={() => navigate(`/search/${item.ticker}`)}>
 							<Row className='m-0 p-0 text-start'>
 								<Col>
 									<h3 className="me-2">{item?.ticker}</h3>

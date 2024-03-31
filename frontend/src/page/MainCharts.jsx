@@ -15,7 +15,6 @@ function MainCharts() {
 
     useEffect(() => {
         fetchData();
-        // eslint-disable-next-line
     }, [ticker]);
 
     const fetchData = async () => {
@@ -23,18 +22,17 @@ function MainCharts() {
             const response = await axios.get(`${apiLink}/api/historical_data?symbol=${ticker}`);
             const data = response.data;
             const ohlc = [], volume = [];
-            console.log('data', data)
             data.forEach(entry => {
                 ohlc.push([
-                    entry.timestamp, // the date
-                    entry.open, // open
-                    entry.high, // high
-                    entry.low, // low
-                    entry.close // close
+                    entry.timestamp,
+                    entry.open,
+                    entry.high,
+                    entry.low,
+                    entry.close
                 ]);
                 volume.push([
-                    entry.timestamp, // the date
-                    entry.volume // the volume
+                    entry.timestamp,
+                    entry.volume
                 ]);
             });
 
@@ -53,6 +51,35 @@ function MainCharts() {
         },
         subtitle: {
             text: 'With SMA and Volume by Price technical indicators'
+        },
+        rangeSelector: {
+            inputEnabled: false,
+            buttons: [{
+                type: 'month',
+                count: 1,
+                text: '1m'
+            }, {
+                type: 'month',
+                count: 3,
+                text: '3m'
+            }, {
+                type: 'month',
+                count: 6,
+                text: '6m'
+            }, {
+                type: 'YTD',
+                count: 1,
+                text: 'YTD'
+            }, {
+                type: 'year',
+                count: 1,
+                text: '1y'
+            }, {
+                type: 'all',
+                count: 1,
+                text: 'All'
+            }],
+            selected: 2
         },
         yAxis: [{
             startOnTick: false,
@@ -104,7 +131,7 @@ function MainCharts() {
             id: 'Volume',
             data: chartData.volume,
             yAxis: 1
-        }, 
+        },
         {
             type: 'vbp',
             linkedTo: 'candleStick',
@@ -117,7 +144,7 @@ function MainCharts() {
             zoneLines: {
                 enabled: false
             }
-        }, 
+        },
         {
             type: 'sma',
             linkedTo: 'candleStick',

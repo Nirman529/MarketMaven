@@ -1,6 +1,6 @@
-import express from 'express';
-import axios from 'axios';
-import { POLY_KEY, FIN_KEY, _POLY_KEY } from '../config.js';
+const express = require('express');
+const axios = require('axios');
+const { POLY_KEY, FIN_KEY, _POLY_KEY } = require('../config.js');
 
 const router = express.Router();
 
@@ -217,9 +217,7 @@ router.get('/company_earnings', async (request, response) => {
 });
 
 router.get('/historical_data', async (request, response) => {
-    // const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
     const symbol = request.query.symbol.toUpperCase();
-
     try {
         const today = new Date().toISOString().split('T')[0];
         const twoYearsAgo = new Date();
@@ -241,33 +239,6 @@ router.get('/historical_data', async (request, response) => {
         console.error('Error fetching chart data:', error);
         response.status(500).json({ error: 'Internal server error' });
     }
-    // const currentDate = new Date();
-    // const to = currentDate.toISOString().split('T')[0];
-
-    // currentDate.setFullYear(currentDate.getFullYear() - 2);
-    // // currentDate.setDate(currentDate.getDate() - 1);
-    // const from = currentDate.toISOString().split('T')[0];
-
-    // try {
-    //     const aresponse = await axios.get(`https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLY_KEY}`);
-    //     const chartData = aresponse.data.results.map(result => ({
-    //         timestamp: result.t,
-    //         open: result.o,
-    //         high: result.h,
-    //         low: result.l,
-    //         close: result.c,
-    //         volume: result.v
-    //     }));
-    //     response.json(chartData);
-
-    // } catch (error) {
-    //     console.error(error);
-    //     response.status(500).json({
-    //         success: false,
-    //         message: "Error fetching data from polygon.io",
-    //         error: error.message
-    //     });
-    // }
 });
 
-export default router;
+module.exports = router;

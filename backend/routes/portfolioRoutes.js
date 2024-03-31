@@ -1,5 +1,5 @@
-import express from 'express';
-import { Portfolio } from '../models/portfolioModel.js';
+const express = require('express');
+const { Portfolio } = require('../models/portfolioModel.js');
 const router = express.Router();
 
 // get all the stocks
@@ -79,4 +79,4 @@ router.post('/update/sell/:ticker', async (request, response) => {
     }
 });
 
-export default router;
+module.exports = router;

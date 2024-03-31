@@ -1,12 +1,12 @@
-import express from 'express';
-import { Wallet } from '../models/walletModel.js';
+const express = require('express');
+const { Wallet } = require('../models/walletModel.js');
 const router = express.Router();
 
 router.get('/get', async (request, response) => {
     try {
         const existingWallet = await Wallet.findOne({});
         if (!existingWallet) {
-            const newWallet = new Wallet({ balance: 25000 }); // Assuming your Wallet schema has a 'balance' field
+            const newWallet = new Wallet({ balance: 25000 });
             await newWallet.save();
             return response.status(201).json(newWallet);
         } else {
@@ -53,4 +53,4 @@ router.post('/withdraw', async (request, response) => {
     }
 });
 
-export default router;
+module.exports = router;

@@ -1,22 +1,28 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPortfolioData, addToPortfolio, removeFromPortfolio, getWatchlistData, removeFromWatchlist, addToWatchlist, getStockInfo, getCompanyLatestPriceOfStock, loadSuggestions, getCompanyPeers, getNews, getCompanyInsiderInformation, getHourlyData, getRecommendationData, getHistoricalData, getEarningsData, getWalletBalance, depositToWallet, withdrawFromWallet } from "../api/api.js";
 import { TailSpin } from 'react-loader-spinner';
-import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal, Alert, Spinner } from 'react-bootstrap';
+import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
+import Paper from '@mui/material/Paper';
+import InputBase from '@mui/material/InputBase';
+import IconButton from '@mui/material/IconButton';
+import CancelIcon from '@mui/icons-material/Clear';
+import SearchIcon from '@mui/icons-material/Search';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from 'react-bootstrap/Alert';
+
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import "bootstrap/dist/css/bootstrap.min.css";
 import MainCharts from './MainCharts.jsx';
 
-// import { useSearch } from '../SearchContext.js';
-
 const Search = () => {
-	// const { searchData, setSearchData } = useSearch();
 	let { ticker } = useParams();
 	const navigate = useNavigate();
+	const inputRef = useRef();
 	let [inputValue, setInputValue] = useState("");
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
@@ -39,6 +45,7 @@ const Search = () => {
 	let [quantity, setQuantity] = useState(0);
 	let [buyTotals, setBuyTotals] = useState(0);
 	let [mainLoading, setMainLoading] = useState("");
+	const [showDropdown, setShowDropdown] = useState(false);
 	const [showErrorAlert, setShowErrorAlert] = useState(false);
 	const [errorAlertMessage, setErrorAlertMessage] = useState('');
 	let [totals, setTotals] = useState({
@@ -82,7 +89,6 @@ const Search = () => {
 		setMainLoading(true);
 
 		try {
-			// Construct an array of promises for the various data fetches
 			const dataFetchPromises = [
 				getStockInfo(symbol),
 				getCompanyLatestPriceOfStock(symbol),
@@ -95,7 +101,6 @@ const Search = () => {
 				getWalletBalance()
 			];
 
-			// Destructure the resolved values from the promises
 			const [
 				_stockInfo,
 				_companyLatestPriceOfStock,
@@ -108,7 +113,6 @@ const Search = () => {
 				_walletBalance
 			] = await Promise.all(dataFetchPromises);
 
-			// Set the state for each piece of data
 			setStockInfo(_stockInfo?.data);
 			setCompanyLatestPriceOfStock(_companyLatestPriceOfStock.data);
 			setCompanyPeers(_companyPeers?.data);
@@ -116,14 +120,12 @@ const Search = () => {
 			setCompanyInsiderInformation(_companyInsiderInformation?.data.data);
 			setHourlyData(convertData(_hourlyData?.data.results));
 			setRecommendationData(_recommendationData?.data);
-			// setHistoricalData(_historicalData?.data.results);
 			setEarningsData(processedHistoricalData(_earningsData?.data));
 			const isPriceUp = _companyLatestPriceOfStock.data?.d > 0;
 			setPriceColor(isPriceUp ? 'green' : 'red');
 			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>);
 			setBalance(_walletBalance.balance);
 
-			// Additional checks for watchlist and portfolio
 			checkIfInWatchlist(symbol);
 			checkIfInPortfolio(symbol);
 			if (!_stockInfo?.data) {
@@ -161,14 +163,6 @@ const Search = () => {
 			performSearchWithSymbol(ticker);
 		}
 	}, [ticker, performSearchWithSymbol]);
-
-	// useEffect(() => {
-	// 	if (ticker) {
-	// 		performSearchWithSymbol(ticker);
-	// 	} else {
-	// 		navigate("../");
-	// 	}
-	// }, [ticker, navigate]);
 
 	const checkIfInPortfolio = async (ticker) => {
 		try {
@@ -231,12 +225,6 @@ const Search = () => {
 			fetchWatchlist();
 		}
 	}, [stockInfo]);
-
-	// useEffect(() => {
-	// 	if (searchTrigger) {
-	// 		performSearchWithSymbol(searchTrigger);
-	// 	}
-	// }, [searchTrigger]);
 
 	useEffect(() => {
 		if (companyInsiderInformation?.length > 0) {
@@ -307,19 +295,17 @@ const Search = () => {
 		triggerSearch(upper);
 	};
 
-	const isValid = (item) => {
-		const requirement = ['image', 'headline'];
-		return requirement.every(key => item[key] !== undefined && item[key] !== "");
-	}
-
 	const autoComplete = (e) => {
 		setInputValue(e.target.value.toUpperCase());
 		setShowSuggestions(true);
 	}
 
 	const clearPage = () => {
-		setInputValue('')
-		setStockInfo(null)
+		setInputValue('');
+		setStockInfo({});
+		setSuggestions([]);
+		setShowDropdown(false);
+		// setError(false);
 	}
 
 	const getUnixDate = (unixTimestamp) => {
@@ -500,36 +486,8 @@ const Search = () => {
 				day: '%Y-%m-%d'
 			},
 			labels: {
-				// formatter: function () {
-				// 	// Use 'pos' as an index if it corresponds with your sorted data array
-				// 	const index = this.pos;
-
-				// 	// Make sure index is within the bounds of the earningsData array
-				// 	if (index < 0 || index >= earningsData.length) {
-				// 		return ''; // Return an empty string or some default HTML as fallback
-				// 	}
-
-				// 	const surprise = earningsData[index].surprisePercent.toFixed(2); // Assuming surprisePercent is a number
-				// 	const periodLabel = `<div style="text-align: center;">${Highcharts.dateFormat('%Y-%m-%d', earningsData[index].period)}</div>`;
-				// 	const surpriseLabel = `<div style="text-align: center;">Surprise: ${surprise}%</div>`;
-
-				// 	return periodLabel + surpriseLabel;
-				// },
-
-
-
-				// formatter: function () {
-				//     const index = this.pos;
-				//     const surprise = earningsData[index].surprisePercent;
-				//     const periodLabel = <div style="text-align: center;">${this.value}</div>;
-				//     const surpriseLabel = <div style="text-align: center;">Surprise: ${surprise}%</div>;
-				//     return ${periodLabel}${surpriseLabel};
-				// },
-
-
 				formatter: function () {
 					const point = earningsData.find(p => new Date(p.period).getTime() === this.value);
-					// const surprise = earningsData.find(p => p.surprise)
 
 					return `<span>${Highcharts.dateFormat('%Y-%m-%d', this.value)}</span><br/><span>${!point ? point?.surprise.toFixed(2) : ''}</span>`;
 				},
@@ -761,6 +719,71 @@ const Search = () => {
 				<h1>STOCK SEARCH</h1>
 				<form action="" onSubmit={handleSubmit} className="search-box mt-5">
 					<div className='m-0'>
+						{/* ---------------- mota bhai ka code */}
+						{/* <Paper
+							component="form"
+							onSubmit={handleSubmit}
+							sx={{
+								p: '5px 15px',
+								display: 'flex',
+								alignItems: 'center',
+								borderRadius: '50px',
+								border: '3px solid darkblue',
+								justifyContent: 'space-between',
+							}}
+						>
+							<InputBase
+								ref={inputRef}
+								sx={{ ml: 2, flex: 1 }}
+								value={ticker}
+								onChange={handleChange}
+								placeholder="Enter Stock Ticker"
+								inputProps={{ style: { width: '100%' } }}
+								onKeyDown={(e) => {
+									// Hide dropdown when Enter key is pressed
+									if (e.key === 'Enter') {
+										setShowDropdown(false);
+									}
+								}}
+							/>
+							<IconButton type="submit" sx={{ p: '10px', color: 'darkblue' }} aria-label="search">
+								<SearchIcon />
+							</IconButton>
+							<IconButton onClick={handleClear} sx={{ p: '10px', color: 'darkblue' }} aria-label="clear">
+								<CancelIcon />
+							</IconButton>
+						</Paper>
+						{error && (
+							<Alert variant="danger" onClose={() => setError(null)} dismissible style={{ marginTop: '2%' }}>
+								{error}
+							</Alert>
+						)}
+						{showDropdown && (
+							<ul style={{
+								position: 'absolute',
+								width: dropdownWidth,
+								listStyleType: 'none',
+								background: '#fff',
+								padding: '5px',
+								zIndex: '1',
+								boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.5)',
+								left: '5%',
+								top: 'calc(100% - 5%)',
+							}}>
+								{loading ? (
+									<li style={{ textAlign: 'center' }}>
+										<CircularProgress />
+									</li>
+								) : (
+									suggestions.map((item, index) => (
+										<li key={index} style={{ cursor: 'pointer', textAlign: 'left' }} onClick={() => handleSelect(item.symbol)}>
+											{item.symbol} - {item.description}
+										</li>
+									))
+								)}
+							</ul>
+						)} */}
+						{/* ---------------- mota bhai ka code */}
 						<input
 							className='ms-3'
 							type="text"
@@ -864,17 +887,13 @@ const Search = () => {
 														<div className='mt-2'><span className='fw-bold'>Webpage:</span> <a href={stockInfo?.weburl} target="_blank" rel="noreferrer">{stockInfo?.weburl}</a></div>
 														<div className='fw-bold mt-2'>Company peers:</div>
 														<p className='mt-2'>{companyPeers?.map((item, key) => {
-															// return <a key={item} onClick={() => searchTicker(item)}>{item}, </a>
 															return <span key={item} className='anchor-tag' onClick={() => searchTicker(item)}>{item}, </span>;
 														})}</p>
 													</Col>
 												</Row>
 											</Col>
 											<Col md={6}>
-												<HighchartsReact
-													highcharts={Highcharts}
-													options={hourlyPriceOptions}
-												/>
+												<HighchartsReact highcharts={Highcharts} options={hourlyPriceOptions} />
 											</Col>
 										</Row>
 									</Tab>
