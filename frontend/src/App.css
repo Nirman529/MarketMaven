@@ -51,6 +51,18 @@
 	line-height: 1;
 }
 
+.text-green {
+	color: green;
+}
+
+.text-red {
+	color: red;
+}
+
+.text-black {
+	color: black;
+}
+
 .no-background-border {
 	display: flex;
 	background-color: transparent;

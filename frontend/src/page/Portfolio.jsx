@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Row, Col, Modal, Form, Alert, Spinner } from 'react-bootstrap';
 import { getWalletBalance, getPortfolioData, getCompanyLatestPriceOfStock, depositToWallet, withdrawFromWallet, removeFromPortfolio, addToPortfolio } from '../api/api.js';
+import { useNavigate } from 'react-router-dom';
 
 const Portfolio = () => {
+	const navigate = useNavigate();
 	const [portfolioData, setPortfolioData] = useState([]);
 	const [balance, setBalance] = useState(null);
 	const [selectedStock, setSelectedStock] = useState(null);
@@ -10,6 +12,7 @@ const Portfolio = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [showAlert, setShowAlert] = useState(false);
 	const [modalInfo, setModalInfo] = useState({ show: false, type: '' });
+	const [alert, setAlert] = useState({ show: false, message: '', variant: '' });
 
 	useEffect(() => {
 		setIsLoading(true);
@@ -60,6 +63,16 @@ const Portfolio = () => {
 
 			await actionPromise;
 			await refetchData();
+
+			setAlert({
+				show: true,
+				message: `${selectedStock?.ticker} ${isBuyAction ? 'bought' : 'sold'} successfully.`,
+				variant: isBuyAction ? 'success' : 'danger',
+			});
+
+			setTimeout(() => {
+				setAlert({ show: false, message: '', variant: '' });
+			}, 15000);
 		} catch (error) {
 			console.error(error.message || "An error occurred during the transaction");
 		}
@@ -93,6 +106,15 @@ const Portfolio = () => {
 	};
 	return (
 		<div className='m-3 main-content'>
+			{alert.show && (
+				<Alert
+					variant={alert.variant}
+					onClose={() => setAlert({ ...alert, show: false })}
+					dismissible
+				>
+					{alert.message}
+				</Alert>
+			)}
 			<h2 className='text-start'>My Portfolio</h2>
 			<h3 className='text-start'>Money in wallet: ${balance ? balance.toFixed(2) : 'Loading...'}</h3>
 
@@ -103,10 +125,13 @@ const Portfolio = () => {
 			) : (
 				<div className="portfolio-container">
 					{portfolioData && portfolioData.length > 0 ? (
-						portfolioData.map((stock, key) => (
-							<Card key={key} className="mb-3">
-								<Card.Header className='text-start'>
-									<span style={{fontWeight: 'bold', fontSize:'30px'}}>
+						portfolioData.map((stock, key) => {
+							const change = roundNumber(stock.c * stock.quantity - stock.avgCost * stock.quantity);
+							const changeClass = change > 0 ? 'text-green' : change < 0 ? 'text-red' : 'text-black';
+
+							return <Card key={key} className="mb-3">
+								<Card.Header className='text-start' style={{ cursor: 'pointer' }} onClick={() => navigate(`/search/${stock.ticker}`)}>
+									<span style={{ fontWeight: 'bold', fontSize: '30px' }}>
 										{stock.ticker}{" "}
 									</span>
 									<span>
@@ -131,9 +156,9 @@ const Portfolio = () => {
 											<Card.Text className='m-0'>Market Value: </Card.Text>
 										</Col>
 										<Col sm={3}>
-											<Card.Text className='m-0'>{roundNumber(stock.avgCost - stock.c)}</Card.Text>
-											<Card.Text className='m-0'>{stock.c}</Card.Text>
-											<Card.Text className='m-0'>{roundNumber(stock.c * stock.quantity)}</Card.Text>
+											<Card.Text className={`m-0 ${changeClass}`}>{roundNumber(stock.avgCost - stock.c)}</Card.Text>
+											<Card.Text className={`m-0 ${changeClass}`}>{stock.c}</Card.Text>
+											<Card.Text className={`m-0 ${changeClass}`}>{roundNumber(stock.c * stock.quantity)}</Card.Text>
 										</Col>
 									</Row>
 									<Card.Footer className='m-0'>
@@ -149,7 +174,7 @@ const Portfolio = () => {
 								</Card.Body>
 
 							</Card>
-						))
+						})
 					) : showAlert && (
 						<Alert variant="warning">
 							Currently, you don't have any stocks.
@@ -166,15 +191,15 @@ const Portfolio = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div>Current Price: {selectedStock ? roundNumber(selectedStock.c).toFixed(2) : 'Loading...'}</div>
-					<div>Money in Wallet: ${balance?.toFixed(2)}</div>
+					<div>Money in Wallet: ${roundNumber(balance)}</div>
 					<Form.Group as={Row} className="align-items-center">
 						<Form.Label column sm={3}>Quantity:</Form.Label>
 						<Col sm={9}>
 							<Form.Control
-								type="number"
+								type='Number'
 								value={quantity}
-								onChange={(e) => setQuantity(Number(e.target.value))}
-								min="1"
+								onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+								min="0"
 								step="1"
 							/>
 						</Col>

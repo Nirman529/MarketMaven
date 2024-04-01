@@ -23,6 +23,8 @@ const Search = () => {
 	let { ticker } = useParams();
 	const navigate = useNavigate();
 	const inputRef = useRef();
+	const [ownedQuantity, setOwnedQuantity] = useState(0);
+	const [searchAttempted, setSearchAttempted] = useState(false);
 	let [inputValue, setInputValue] = useState("");
 	let [stockInfo, setStockInfo] = useState(null);
 	let [companyPeers, setCompanyPeers] = useState(null);
@@ -41,10 +43,11 @@ const Search = () => {
 	let [recommendationData, setRecommendationData] = useState(null);
 	let [historicalData, setHistoricalData] = useState(null);
 	let [earningsData, setEarningsData] = useState(null);
-	let [portfolioData, setPortfolioData] = useState({});
+	let [portfolioData, setPortfolioData] = useState([]);
 	let [quantity, setQuantity] = useState(0);
 	let [buyTotals, setBuyTotals] = useState(0);
 	let [mainLoading, setMainLoading] = useState("");
+	const [searchLoading, setSearchLoading] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [showErrorAlert, setShowErrorAlert] = useState(false);
 	const [errorAlertMessage, setErrorAlertMessage] = useState('');
@@ -86,7 +89,8 @@ const Search = () => {
 			console.log("Please enter a ticker symbol to search.");
 			return;
 		}
-		setMainLoading(true);
+		setSearchAttempted(true);
+		setSearchLoading(true);
 
 		try {
 			const dataFetchPromises = [
@@ -98,7 +102,8 @@ const Search = () => {
 				getHourlyData(symbol),
 				getRecommendationData(symbol),
 				getEarningsData(symbol),
-				getWalletBalance()
+				getWalletBalance(),
+				getPortfolioData()
 			];
 
 			const [
@@ -110,7 +115,8 @@ const Search = () => {
 				_hourlyData,
 				_recommendationData,
 				_earningsData,
-				_walletBalance
+				_walletBalance,
+				_portfolioData,
 			] = await Promise.all(dataFetchPromises);
 
 			setStockInfo(_stockInfo?.data);
@@ -125,20 +131,24 @@ const Search = () => {
 			setPriceColor(isPriceUp ? 'green' : 'red');
 			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>);
 			setBalance(_walletBalance.balance);
+			setPortfolioData(_portfolioData.data)
 
 			checkIfInWatchlist(symbol);
 			checkIfInPortfolio(symbol);
-			if (!_stockInfo?.data) {
+			console.log('_stockInfo', _stockInfo)
+			if (_stockInfo?.data == []) {
+				console.log('andar gaya re baba',)
 				setShowErrorAlert(true);
 				setErrorAlertMessage('No data found. Please enter a valid Ticker');
 			} else {
+				console.log('andar nai aya re baba',)
 				setShowErrorAlert(false);
 			}
 		} catch (error) {
 			setShowErrorAlert(true);
 			console.error('Error fetching stock info:', error);
 		} finally {
-			setMainLoading(false);
+			setSearchLoading(false);
 		}
 	}, []);
 
@@ -285,6 +295,7 @@ const Search = () => {
 	const handleSubmit = (event) => {
 		event.preventDefault();
 		const upper = inputValue.toUpperCase();
+		setSearchAttempted(false);
 		setInputValue(upper);
 		triggerSearch(upper);
 	};
@@ -545,9 +556,20 @@ const Search = () => {
 	};
 
 	const handleQuantityChange = (e) => {
-		const qty = Number(e.target.value);
+		const qty = e.target.value === '' ? '' : Number(e.target.value)
 		setQuantity(qty);
 		setBuyTotals(roundNumber(qty * companyLatestPriceOfStock?.c));
+	};
+
+	const updatePortfolioStatus = async () => {
+		try {
+			const portfolioResponse = await getPortfolioData();
+			const stockInPortfolio = portfolioResponse.data.some(stock => stock.ticker === ticker.toUpperCase());
+			setIsStockInPortfolio(stockInPortfolio);
+			setPortfolioData(portfolioResponse.data);
+		} catch (error) {
+			console.error("Error updating portfolio status:", error);
+		}
 	};
 
 	const handleBuy = async () => {
@@ -569,6 +591,8 @@ const Search = () => {
 			await addToPortfolio(ticker, name, quantity, purchasePrice);
 		} catch (error) {
 			console.error("Transaction failed:", error);
+		} finally {
+			await updatePortfolioStatus();
 		}
 		setQuantity(0);
 		setBuyModal(!buyModal);
@@ -591,6 +615,8 @@ const Search = () => {
 			await removeFromPortfolio(ticker, quantity, sellPrice);
 		} catch (error) {
 			console.error("Transaction failed:", error);
+		} finally {
+			await updatePortfolioStatus(); // Refresh portfolio status after buying
 		}
 		setQuantity(0);
 		setSellModal(!sellModal);
@@ -623,6 +649,11 @@ const Search = () => {
 		}
 	};
 
+	useEffect(() => {
+		const stock = portfolioData?.find(s => s.ticker === ticker);
+		setOwnedQuantity(stock ? stock.quantity : 0);
+	}, [portfolioData, ticker]);
+
 	const buyOptions = () => {
 		return <>
 			{isStockInPortfolio ?
@@ -631,9 +662,7 @@ const Search = () => {
 						<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
 						<Button className='btn btn-danger px-3' onClick={() => setSellModal(!sellModal)}>sell</Button>
 					</>
-				)
-				:
-				(
+				) : (
 					<Button className='btn btn-success me-3 px-3' onClick={() => setBuyModal(!buyModal)}>Buy</Button>
 				)
 			}
@@ -644,7 +673,7 @@ const Search = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: ${balance}</div>
+					<div className='m-0'>Money in Wallet: ${roundNumber(balance)}</div>
 
 					<Form.Group as={Row} className='m-0 my-1 align-items-center' controlId="formQuantity">
 						Quantity:
@@ -663,8 +692,8 @@ const Search = () => {
 					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
-					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
-					<Button className='btn btn-success me-3 px-3' onClick={handleBuy} disabled={companyLatestPriceOfStock?.c * quantity > balance}>
+					<p className='text-start'>Total: {roundNumber(buyTotals)}</p>
+					<Button className='btn btn-success me-3 px-3' onClick={handleBuy} disabled={quantity > ownedQuantity || quantity < 0}>
 						Buy
 					</Button>
 				</Modal.Footer>
@@ -676,7 +705,7 @@ const Search = () => {
 				</Modal.Header>
 				<Modal.Body className='fw-bold'>
 					<div className='m-0'>Current Price: {roundNumber(companyLatestPriceOfStock?.c)}</div>
-					<div className='m-0'>Money in Wallet: ${balance}</div>
+					<div className='m-0'>Money in Wallet: ${roundNumber(balance)}</div>
 					<Form.Group as={Row} className="m-0 my-1 align-items-center">
 						Quantity:
 						<Col>
@@ -690,11 +719,11 @@ const Search = () => {
 						</Col>
 					</Form.Group>
 					{
-						// quantity > selectedStock?.quantity ? <div className='text-danger'>You cannot sell the stocks you don't have!</div> : <></>
+						quantity > ownedQuantity ? <div className='text-danger'>You cannot sell more than you own!</div> : <></>
 					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
-					<p className='text-start'>Total: {buyTotals.toFixed(2)}</p>
+					<p className='text-start'>Total: {roundNumber(buyTotals)}</p>
 					<Button className='btn btn-success px-3' onClick={handleSell}>
 						Sell
 					</Button>
@@ -826,8 +855,18 @@ const Search = () => {
 					<button onClick={performSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
 					<button onClick={() => clearPage()} className='me-3'><i className="bi bi-x" style={{ fontSize: '2rem' }}></i></button>
 				</form>
-				{
-					stockInfo ?
+				{searchLoading ? (
+					<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+						<TailSpin
+							visible={true}
+							height="50"
+							width="50"
+							color="#000080"
+							ariaLabel="loading"
+						/>
+					</div>
+				) : (
+					stockInfo?.ticker ?
 						<>
 							<div className="company-details mt-3">
 								<Row className='m-0 p-0'>
@@ -991,8 +1030,14 @@ const Search = () => {
 							</Modal>
 						</>
 						:
-						<></>
-				}
+						<>
+							{searchAttempted && !showErrorAlert && (
+								<Alert variant="danger" className='mt-3'>
+									No data found. Please enter a valid Ticker
+								</Alert>
+							)}
+						</>
+				)}
 			</div>
 		</>
 	)

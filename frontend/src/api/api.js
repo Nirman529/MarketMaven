@@ -173,7 +173,6 @@ export const addToWatchlist = async (ticker, name) => {
         }
 
         const data = await response.json();
-        console.log('Stock added to watchlist:', data);
     } catch (error) {
         console.error('Failed to add to watchlist:', error);
     }
@@ -193,7 +192,6 @@ export const removeFromWatchlist = async (ticker) => {
         }
 
         const data = await response.json();
-        console.log('Stock removed from watchlist:', data);
         return data;
     } catch (error) {
         console.error('Failed to remove from watchlist:', error);
@@ -217,7 +215,7 @@ export const getPortfolioData = async () => {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.log('error in fetching watchlist data', error)
+        console.log('error in fetching portfolio data', error)
         return [];
     }
 }
@@ -239,7 +237,6 @@ export const addToPortfolio = async (ticker, name, quantity, purchasePrice) => {
         }
 
         const data = await response.json();
-        console.log('Stock added to portfolio:', data);
         return data;
     } catch (error) {
         console.error('Failed to add to portfolio:', error);
@@ -264,7 +261,6 @@ export const removeFromPortfolio = async (ticker, quantity, sellPrice) => {
         }
 
         const data = await response.json();
-        console.log('Updated portfolio after selling stock:', data);
         return data;
     } catch (error) {
         console.error('Failed to update portfolio after selling:', error);
