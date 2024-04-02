@@ -72,7 +72,7 @@ const Portfolio = () => {
 
 			setTimeout(() => {
 				setAlert({ show: false, message: '', variant: '' });
-			}, 15000);
+			}, 3000);
 		} catch (error) {
 			console.error(error.message || "An error occurred during the transaction");
 		}
@@ -156,7 +156,14 @@ const Portfolio = () => {
 											<Card.Text className='m-0'>Market Value: </Card.Text>
 										</Col>
 										<Col sm={3}>
-											<Card.Text className={`m-0 ${changeClass}`}>{roundNumber(stock.avgCost - stock.c)}</Card.Text>
+											<Card.Text className={`m-0 ${changeClass}`}>
+												{stock.c - stock.avgCost > 0 ? (
+													<i className="bi bi-caret-up-fill" style={{ color: 'green' }}></i>
+												) : stock.c - stock.avgCost < 0 ? (
+													<i className="bi bi-caret-down-fill" style={{ color: 'red' }}></i>
+												) : null}
+												{roundNumber(stock.c - stock.avgCost)}
+											</Card.Text>
 											<Card.Text className={`m-0 ${changeClass}`}>{stock.c}</Card.Text>
 											<Card.Text className={`m-0 ${changeClass}`}>{roundNumber(stock.c * stock.quantity)}</Card.Text>
 										</Col>
@@ -207,8 +214,14 @@ const Portfolio = () => {
 					{modalInfo.type === 'buy' && selectedStock?.c * quantity > balance && (
 						<div className='text-danger'>Not enough money in wallet!</div>
 					)}
+					{modalInfo.type === 'buy' && quantity < 0 && (
+						<div className='text-danger'>Cannot buy non-positive shares.</div>
+					)}
 					{modalInfo.type === 'sell' && quantity > selectedStock?.quantity && (
 						<div className='text-danger'>Cannot sell more than you own!</div>
+					)}
+					{modalInfo.type === 'sell' && quantity < 0 && (
+						<div className='text-danger'>Cannot sell non-positive shares.</div>
 					)}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>

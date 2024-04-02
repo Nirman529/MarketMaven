@@ -57,7 +57,7 @@ const Watchlist = () => {
 		<div className='main-content mx-3'>
 			<Col>
 				<h2 className='m-3 text-start mb-3 mt-3'>My Watchlist</h2>
-				{alert.show && <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })} dismissible>{alert.message}</Alert>}
+				{alert.show && <Alert variant={alert.variant} onClose={() => setAlert({ ...alert, show: false })}>{alert.message}</Alert>}
 				{loading ? (
 					<Spinner animation="border" role="status">
 						<span className="visually-hidden">Spinner Loading</span>

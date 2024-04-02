@@ -21,6 +21,12 @@
 	height: 50px;
 }
 
+.head {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+
 .navbar a {
 	color: white;
 	text-decoration: none;
@@ -34,10 +40,20 @@
 	border-radius: 15px;
 	color: white;
 	text-decoration: none;
+	padding: 10px 15px;
+}
+
+.head-link.active {
+	color: #cfcfcf;
+	border: 2px solid white;
+	border-radius: 15px;
+	background-color: transparent;
 }
 
 .head-link:hover {
 	border-color: white;
+	color: #cfcfcf;
+	text-decoration: none;
 }
 
 .main-content {
@@ -170,29 +186,25 @@
 	border-bottom: 1px solid #000080;
 }
 
-.nav-link {
+.head-link {
 	color: white;
 }
 
-.nav-link.active {
+.head-link .active {
 	color: #cfcfcf;
 	border: 2px solid white;
 	border-radius: 15px;
 }
 
-.navbar .nav {
+.head-link:hover {
+	color: #cfcfcf;
+	text-decoration: none;
+}
+
+.navbar .head {
 	display: flex;
 	align-items: center;
 	margin-bottom: 0;
-}
-
-.navbar-brand {
-	color: white;
-}
-
-.nav-link:hover {
-	color: #cfcfcf;
-	text-decoration: none;
 }
 
 .tab-content {

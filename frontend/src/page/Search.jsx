@@ -5,14 +5,7 @@ import { TailSpin } from 'react-loader-spinner';
 import { Form, Table, Row, Col, Button, Tabs, Tab, Card, Modal } from 'react-bootstrap';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
-import Paper from '@mui/material/Paper';
-import InputBase from '@mui/material/InputBase';
-import IconButton from '@mui/material/IconButton';
-import CancelIcon from '@mui/icons-material/Clear';
-import SearchIcon from '@mui/icons-material/Search';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from 'react-bootstrap/Alert';
-
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -47,6 +40,10 @@ const Search = () => {
 	let [quantity, setQuantity] = useState(0);
 	let [buyTotals, setBuyTotals] = useState(0);
 	let [mainLoading, setMainLoading] = useState("");
+	const [watchlistAlert, setWatchlistAlert] = useState({ message: '', variant: 'success' });
+	const [portfolioAlert, setPortfolioAlert] = useState({ message: '', variant: 'success' });
+	const [showWatchlistAlert, setShowWatchlistAlert] = useState(false);
+	const [showPortfolioAlert, setShowPortfolioAlert] = useState(false);
 	const [searchLoading, setSearchLoading] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -89,6 +86,8 @@ const Search = () => {
 			console.log("Please enter a ticker symbol to search.");
 			return;
 		}
+		setSuggestions([]);
+		setShowSuggestions(false);
 		setSearchAttempted(true);
 		setSearchLoading(true);
 
@@ -126,7 +125,7 @@ const Search = () => {
 			setCompanyInsiderInformation(_companyInsiderInformation?.data.data);
 			setHourlyData(convertData(_hourlyData?.data.results));
 			setRecommendationData(_recommendationData?.data);
-			setEarningsData(processedHistoricalData(_earningsData?.data));
+			setEarningsData(_earningsData?.data);
 			const isPriceUp = _companyLatestPriceOfStock.data?.d > 0;
 			setPriceColor(isPriceUp ? 'green' : 'red');
 			setArrowIcon(isPriceUp ? <i className="bi bi-caret-up-fill"></i> : <i className="bi bi-caret-down-fill"></i>);
@@ -135,13 +134,10 @@ const Search = () => {
 
 			checkIfInWatchlist(symbol);
 			checkIfInPortfolio(symbol);
-			console.log('_stockInfo', _stockInfo)
 			if (_stockInfo?.data == []) {
-				console.log('andar gaya re baba',)
 				setShowErrorAlert(true);
 				setErrorAlertMessage('No data found. Please enter a valid Ticker');
 			} else {
-				console.log('andar nai aya re baba',)
 				setShowErrorAlert(false);
 			}
 		} catch (error) {
@@ -184,17 +180,6 @@ const Search = () => {
 		}
 	};
 
-
-	const processedHistoricalData = (data) => {
-		return data.map(item => {
-			return {
-				x: new Date(item.period),
-				y: item.actual,
-				estimate: item.estimate
-			};
-		});
-	};
-
 	const convertData = (data) => {
 		const newArray = data?.map(item => {
 			const date = new Date(item.t);
@@ -213,7 +198,6 @@ const Search = () => {
 			console.log("Input value is empty.");
 			return;
 		} else {
-
 			navigate(`/search/${inputValue}`)
 		}
 	}
@@ -316,7 +300,6 @@ const Search = () => {
 		setStockInfo({});
 		setSuggestions([]);
 		setShowDropdown(false);
-		// setError(false);
 	}
 
 	const getUnixDate = (unixTimestamp) => {
@@ -356,14 +339,6 @@ const Search = () => {
 		const shareUrl = encodeURIComponent(articleUrl);
 		return `${facebookBaseUrl}?u=${shareUrl}`;
 	};
-
-	const volume = historicalData?.map(item => {
-		return [item.t, item.v]
-	});
-
-	const stock_price = historicalData?.map(item => {
-		return [item.t, item.c]
-	});
 
 	const hourlyPriceOptions = {
 		chart: {
@@ -484,7 +459,6 @@ const Search = () => {
 	const historicalEPSSurprisesOptions = {
 		chart: {
 			type: 'spline',
-			inverted: false,
 			backgroundColor: '#f4f4f4',
 		},
 		title: {
@@ -492,38 +466,40 @@ const Search = () => {
 			align: 'center'
 		},
 		xAxis: {
-			type: 'datetime',
-			dateTimeLabelFormats: {
-				day: '%Y-%m-%d'
-			},
-			labels: {
-				formatter: function () {
-					const point = earningsData.find(p => new Date(p.period).getTime() === this.value);
-
-					return `<span>${Highcharts.dateFormat('%Y-%m-%d', this.value)}</span><br/><span>${!point ? point?.surprise.toFixed(2) : ''}</span>`;
-				},
-				useHTML: true,
-				style: {
-					textAlign: 'center'
-				}
-			},
-		},
+            categories: earningsData?.map(item => item.period),
+            labels: {
+                formatter: function () {
+                    const index = this.pos;
+                    const surprise = earningsData[index].surprisePercent;
+                    const periodLabel = `<div style="text-align: center;">${this.value}</div>`;
+                    const surpriseLabel = `<div style="text-align: center;">Surprise: ${surprise}%</div>`;
+                    return `${periodLabel}${surpriseLabel}`;
+                },
+                useHTML: true
+            },
+            title: {
+                text: 'Period',
+                style: {
+                    textAlign: 'center',
+                    borderBottom: 'solid 1px #ddd',
+                }
+            }
+        },
 		yAxis: {
-			title: {
-				text: 'Quarterly EPS'
-			}
-		},
+            title: {
+                text: 'EPS'
+            },
+            labels: {
+                format: '{value}'
+            }
+        },
 		legend: {
 			enabled: true
 		},
 		tooltip: {
-			formatter: function () {
-				const date = Highcharts.dateFormat('%Y-%m-%d', this.x);
-				return `<b>Date:</b> ${date}<br/>
-					  <b>Actual:</b> ${this.y}<br/>
-					  <b>Estimate:</b> ${this.point.estimate}`;
-			}
-		},
+            headerFormat: '<b>{point.key}</b><br/>',
+            pointFormat: 'EPS: {point.y}'
+        },
 		plotOptions: {
 			spline: {
 				marker: {
@@ -532,27 +508,12 @@ const Search = () => {
 			}
 		},
 		series: [{
-			name: 'Actual',
-			data: earningsData,
-			marker: {
-				fillColor: 'blue',
-				lineWidth: 2,
-				lineColor: null
-			}
-		}, {
-			name: 'Estimate',
-			data: earningsData?.map(point => {
-				return {
-					x: point.x,
-					y: point.estimate
-				};
-			}),
-			marker: {
-				fillColor: 'blue',
-				lineWidth: 2,
-				lineColor: null
-			}
-		}]
+            name: 'Actual',
+            data: earningsData?.map(item => item.actual)
+        }, {
+            name: 'Estimate',
+            data: earningsData?.map(item => item.estimate)
+        }]
 	};
 
 	const handleQuantityChange = (e) => {
@@ -589,6 +550,9 @@ const Search = () => {
 			const ticker = stockInfo?.ticker;
 			const name = stockInfo?.name;
 			await addToPortfolio(ticker, name, quantity, purchasePrice);
+			setPortfolioAlert({ message: `${ticker} bought successfully`, variant: 'success' });
+			setShowPortfolioAlert(true);
+			setTimeout(() => setShowPortfolioAlert(false), 3000);
 		} catch (error) {
 			console.error("Transaction failed:", error);
 		} finally {
@@ -613,6 +577,9 @@ const Search = () => {
 			}
 			const ticker = stockInfo?.ticker;
 			await removeFromPortfolio(ticker, quantity, sellPrice);
+			setPortfolioAlert({ message: `${ticker} sold successfully`, variant: 'warning' });
+			setShowPortfolioAlert(true);
+			setTimeout(() => setShowPortfolioAlert(false), 3000);
 		} catch (error) {
 			console.error("Transaction failed:", error);
 		} finally {
@@ -634,6 +601,9 @@ const Search = () => {
 	const handleAddToWatchlist = async (ticker, name) => {
 		try {
 			await addToWatchlist(ticker, name);
+			setWatchlistAlert({ message: `${ticker} added to watchlist successfully`, variant: 'success' });
+			setShowWatchlistAlert(true);
+			setTimeout(() => setShowWatchlistAlert(false), 3000);
 			checkIfInWatchlist(ticker);
 		} catch (error) {
 			console.error('Failed to add to watchlist:', error);
@@ -643,6 +613,9 @@ const Search = () => {
 	const handleRemoveFromWatchlist = async (ticker) => {
 		try {
 			await removeFromWatchlist(ticker);
+			setWatchlistAlert({ message: `${ticker} removed from watchlist successfully`, variant: 'danger' });
+			setShowWatchlistAlert(true);
+			setTimeout(() => setShowWatchlistAlert(false), 3000);
 			checkIfInWatchlist(ticker);
 		} catch (error) {
 			console.error('Failed to remove from watchlist:', error);
@@ -690,10 +663,13 @@ const Search = () => {
 					{
 						companyLatestPriceOfStock?.c * quantity > balance ? <div className='text-danger'>Not enough money in wallet!</div> : <></>
 					}
+					{
+						quantity < 0 ? <div className='text-danger'>Cannot buy non-positive shares.</div> : <></>
+					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {roundNumber(buyTotals)}</p>
-					<Button className='btn btn-success me-3 px-3' onClick={handleBuy} disabled={quantity > ownedQuantity || quantity < 0}>
+					<Button className='btn btn-success me-3 px-3' onClick={handleBuy} disabled={companyLatestPriceOfStock?.c * quantity > balance || quantity < 1 || quantity === ''}>
 						Buy
 					</Button>
 				</Modal.Footer>
@@ -721,10 +697,13 @@ const Search = () => {
 					{
 						quantity > ownedQuantity ? <div className='text-danger'>You cannot sell more than you own!</div> : <></>
 					}
+					{
+						quantity < 0 ? <div className='text-danger'>Cannot sell non-positive shares.</div> : <></>
+					}
 				</Modal.Body>
 				<Modal.Footer className='d-flex justify-content-between align-items-center'>
 					<p className='text-start'>Total: {roundNumber(buyTotals)}</p>
-					<Button className='btn btn-success px-3' onClick={handleSell}>
+					<Button className='btn btn-success px-3' disabled={quantity > ownedQuantity || quantity < 1} onClick={handleSell}>
 						Sell
 					</Button>
 				</Modal.Footer>
@@ -748,71 +727,6 @@ const Search = () => {
 				<h1>STOCK SEARCH</h1>
 				<form action="" onSubmit={handleSubmit} className="search-box mt-5">
 					<div className='m-0'>
-						{/* ---------------- mota bhai ka code */}
-						{/* <Paper
-							component="form"
-							onSubmit={handleSubmit}
-							sx={{
-								p: '5px 15px',
-								display: 'flex',
-								alignItems: 'center',
-								borderRadius: '50px',
-								border: '3px solid darkblue',
-								justifyContent: 'space-between',
-							}}
-						>
-							<InputBase
-								ref={inputRef}
-								sx={{ ml: 2, flex: 1 }}
-								value={ticker}
-								onChange={handleChange}
-								placeholder="Enter Stock Ticker"
-								inputProps={{ style: { width: '100%' } }}
-								onKeyDown={(e) => {
-									// Hide dropdown when Enter key is pressed
-									if (e.key === 'Enter') {
-										setShowDropdown(false);
-									}
-								}}
-							/>
-							<IconButton type="submit" sx={{ p: '10px', color: 'darkblue' }} aria-label="search">
-								<SearchIcon />
-							</IconButton>
-							<IconButton onClick={handleClear} sx={{ p: '10px', color: 'darkblue' }} aria-label="clear">
-								<CancelIcon />
-							</IconButton>
-						</Paper>
-						{error && (
-							<Alert variant="danger" onClose={() => setError(null)} dismissible style={{ marginTop: '2%' }}>
-								{error}
-							</Alert>
-						)}
-						{showDropdown && (
-							<ul style={{
-								position: 'absolute',
-								width: dropdownWidth,
-								listStyleType: 'none',
-								background: '#fff',
-								padding: '5px',
-								zIndex: '1',
-								boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.5)',
-								left: '5%',
-								top: 'calc(100% - 5%)',
-							}}>
-								{loading ? (
-									<li style={{ textAlign: 'center' }}>
-										<CircularProgress />
-									</li>
-								) : (
-									suggestions.map((item, index) => (
-										<li key={index} style={{ cursor: 'pointer', textAlign: 'left' }} onClick={() => handleSelect(item.symbol)}>
-											{item.symbol} - {item.description}
-										</li>
-									))
-								)}
-							</ul>
-						)} */}
-						{/* ---------------- mota bhai ka code */}
 						<input
 							className='ms-3'
 							type="text"
@@ -855,6 +769,16 @@ const Search = () => {
 					<button onClick={performSearch}><i className="bi bi-search" style={{ fontSize: '1rem' }}></i></button>
 					<button onClick={() => clearPage()} className='me-3'><i className="bi bi-x" style={{ fontSize: '2rem' }}></i></button>
 				</form>
+				{showWatchlistAlert && (
+					<Alert variant={watchlistAlert.variant} className="mt-3">
+						{watchlistAlert.message}
+					</Alert>
+				)}
+				{showPortfolioAlert && (
+					<Alert variant={portfolioAlert.variant} className="mt-3">
+						{portfolioAlert.message}
+					</Alert>
+				)}
 				{searchLoading ? (
 					<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
 						<TailSpin
