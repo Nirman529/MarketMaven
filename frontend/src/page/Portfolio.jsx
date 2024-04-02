@@ -105,7 +105,7 @@ const Portfolio = () => {
 		}
 	};
 	return (
-		<div className='m-3 main-content'>
+		<div className='m-3 mt-3 main-content'>
 			{alert.show && (
 				<Alert
 					variant={alert.variant}

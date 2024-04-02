@@ -11,13 +11,13 @@ const Header = () => {
                     Stock Search
                 </div>
                 <ul className='head'>
-                    <li className='head-item me-2'>
+                    <li className='head-item'>
                         <NavLink className={() => isSearchActive() ? "head-link active" : "head-link"} to="/search/home">Search</NavLink>
                     </li>
-                    <li className='nav-item me-2'>
+                    <li className='nav-item'>
                         <NavLink className={({ isActive }) => isActive ? "head-link active" : "head-link"} to="/watchlist">Watchlist</NavLink>
                     </li>
-                    <li className='head-item me-3'>
+                    <li className='head-item'>
                         <NavLink className={({ isActive }) => isActive ? "head-link active" : "head-link"} to="/portfolio">Portfolio</NavLink>
                     </li>
                 </ul>

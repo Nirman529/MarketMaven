@@ -18,42 +18,13 @@
 .navbar {
 	background-color: #000080;
 	color: white;
-	height: 50px;
+	height: 100%;
 }
 
 .head {
 	list-style-type: none;
 	padding: 0;
 	margin: 0;
-}
-
-.navbar a {
-	color: white;
-	text-decoration: none;
-}
-
-.head-link {
-	padding: 2px;
-	margin-right: 1rem;
-	border: 1px solid transparent;
-	cursor: pointer;
-	border-radius: 15px;
-	color: white;
-	text-decoration: none;
-	padding: 10px 15px;
-}
-
-.head-link.active {
-	color: #cfcfcf;
-	border: 2px solid white;
-	border-radius: 15px;
-	background-color: transparent;
-}
-
-.head-link:hover {
-	border-color: white;
-	color: #cfcfcf;
-	text-decoration: none;
 }
 
 .main-content {
@@ -89,7 +60,7 @@
 .centered-content {
 	display: flex;
 	justify-content: center;
-	min-height: calc(100vh - 110px);
+	min-height: calc(100vh - 117.6px);
 }
 
 .search-box {
@@ -187,17 +158,24 @@
 }
 
 .head-link {
-	color: white;
+	color: #b4d2ff;
+	margin-right: 1rem;
+	border: 1px solid transparent;
+	cursor: pointer;
+	border-radius: 15px;
+	text-decoration: none;
+	padding: 5px 10px;
 }
 
-.head-link .active {
-	color: #cfcfcf;
+.head-link.active {
+	color: white;
 	border: 2px solid white;
 	border-radius: 15px;
+	background-color: transparent;
 }
 
 .head-link:hover {
-	color: #cfcfcf;
+	color: white;
 	text-decoration: none;
 }
 
@@ -263,7 +241,10 @@
 	margin-right: 10px;
 }
 
-
 .hover-effect:hover {
 	cursor: pointer;
+}
+
+.portfolio-container {
+	margin-top: 20px;
 }
